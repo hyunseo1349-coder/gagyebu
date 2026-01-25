@@ -1,114 +1,106 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Smart Ledger Pro</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
   <style>
-    :root { --primary: #6366F1; --bg: #F9FAFB; --danger: #EF4444; --success: #10B981; --gift: #F59E0B; }
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Noto Sans KR', sans-serif !important; -webkit-tap-highlight-color: transparent; }
-    body { background: var(--bg); color: #1F2937; padding-bottom: 50px; }
-    
-    .header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: white; border-bottom: 1px solid #E5E7EB; position: sticky; top: 0; z-index: 100; }
-    .logo { font-weight: 900; color: var(--primary); font-size: 1.2rem; }
+    :root { --primary:#6366F1; --bg:#F9FAFB; --danger:#EF4444; --success:#10B981; --gift:#F59E0B; }
+    * { margin:0; padding:0; box-sizing:border-box; font-family:'Noto Sans KR',sans-serif; -webkit-tap-highlight-color:transparent; }
+    body { background:var(--bg); color:#1F2937; padding-bottom:50px; }
 
-    .main { max-width: 800px; margin: 0 auto; padding: 16px; }
+    .header { display:flex; justify-content:space-between; align-items:center; padding:16px 20px; background:#fff; border-bottom:1px solid #E5E7EB; position:sticky; top:0; z-index:100; }
+    .logo { font-weight:900; color:var(--primary); font-size:1.2rem; }
+    .main { max-width:800px; margin:0 auto; padding:16px; }
 
-    /* 요약 카드 */
-    .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px; }
-    .card { background: white; padding: 20px; border-radius: 20px; border: 1px solid #E5E7EB; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-    .card-label { font-size: 12px; color: #6B7280; margin-bottom: 6px; display: block; }
-    .card-value { font-size: 18px; font-weight: 800; display: block; }
+    .dashboard { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:24px; }
+    .card { background:#fff; padding:20px; border-radius:20px; border:1px solid #E5E7EB; }
+    .card-label { font-size:12px; color:#6B7280; margin-bottom:6px; display:block; }
+    .card-value { font-size:18px; font-weight:800; }
 
-    /* 차트 섹션 */
-    .chart-container { background: white; padding: 20px; border-radius: 24px; border: 1px solid #E5E7EB; margin-bottom: 24px; display: flex; flex-direction: column; align-items: center; }
+    .chart-container { background:#fff; padding:20px; border-radius:24px; border:1px solid #E5E7EB; margin-bottom:24px; text-align:center; }
 
-    /* 입력 탭 */
-    .input-box { background: white; border-radius: 24px; padding: 24px; border: 1px solid #E5E7EB; margin-bottom: 24px; }
-    .tabs { display: flex; gap: 20px; margin-bottom: 20px; border-bottom: 2px solid #F3F4F6; }
-    .tab { padding-bottom: 10px; cursor: pointer; font-size: 15px; font-weight: 700; color: #9CA3AF; }
-    .tab.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
+    .input-box { background:#fff; border-radius:24px; padding:24px; border:1px solid #E5E7EB; margin-bottom:24px; }
+    .tabs { display:flex; gap:20px; margin-bottom:20px; border-bottom:2px solid #F3F4F6; }
+    .tab { padding-bottom:10px; cursor:pointer; font-size:15px; font-weight:700; color:#9CA3AF; }
+    .tab.active { color:var(--primary); border-bottom:2px solid var(--primary); }
 
-    textarea { width: 100%; height: 100px; padding: 15px; border-radius: 16px; border: 1px solid #E5E7EB; background: #F9FAFB; font-size: 14px; margin-bottom: 12px; resize: none; outline: none; }
-    .manual-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .manual-form input, .manual-form select { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #E5E7EB; font-size: 14px; background: #F9FAFB; }
-    .full { grid-column: span 2; }
+    textarea { width:100%; height:100px; padding:15px; border-radius:16px; border:1px solid #E5E7EB; background:#F9FAFB; font-size:14px; margin-bottom:12px; resize:none; }
+    .manual-form { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .manual-form input,.manual-form select { padding:12px; border-radius:12px; border:1px solid #E5E7EB; background:#F9FAFB; }
+    .full { grid-column:span 2; }
 
-    .btn { padding: 14px; border-radius: 14px; border: none; cursor: pointer; font-weight: 800; font-size: 15px; transition: 0.2s; }
-    .btn-primary { background: var(--primary); color: white; width: 100%; }
-    .btn-danger { background: #fee2e2; color: var(--danger); }
-    .btn-reset { background: #F3F4F6; color: #4B5563; padding: 8px 16px; font-size: 12px; border-radius: 10px; margin-bottom: 15px; border:none; cursor: pointer; font-weight: 700;}
+    .btn { padding:14px; border-radius:14px; border:none; cursor:pointer; font-weight:800; font-size:15px; }
+    .btn-primary { background:var(--primary); color:#fff; width:100%; }
+    .btn-reset { background:#F3F4F6; color:#4B5563; padding:8px 16px; font-size:12px; border-radius:10px; }
 
-    /* 리스트 스타일 */
-    .list-item { background: white; padding: 18px; border-radius: 18px; margin-bottom: 12px; border: 1px solid #F3F4F6; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: transform 0.1s; }
-    .list-item:active { transform: scale(0.98); }
-    .tag { font-size: 10px; padding: 3px 8px; border-radius: 6px; font-weight: 800; margin-right: 6px; text-transform: uppercase; }
-    .tag-food { background: #FFEDD5; color: #EA580C; }
-    .tag-shopping { background: #DCFCE7; color: #16A34A; }
-    .tag-giftcard { background: #FEF3C7; color: #D97706; }
-    .tag-transport { background: #DBEAFE; color: #2563EB; }
-    .tag-etc { background: #F3F4F6; color: #4B5563; }
-    .item-info { font-size: 11px; color: #9CA3AF; margin-top: 4px; }
+    .list-item { background:#fff; padding:18px; border-radius:18px; margin-bottom:12px; border:1px solid #F3F4F6; display:flex; justify-content:space-between; }
+    .tag { font-size:10px; padding:3px 8px; border-radius:6px; font-weight:800; margin-right:6px; }
+    .tag-food { background:#FFEDD5; color:#EA580C; }
+    .tag-giftcard { background:#FEF3C7; color:#D97706; }
+    .tag-shopping { background:#ECFEFF; color:#0891B2; }
+    .tag-transport { background:#F0FDF4; color:#16A34A; }
+    .tag-etc { background:#F3F4F6; color:#4B5563; }
 
-    /* 필터 뱃지 */
-    #filterStatus { display: none; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-
-    /* 모달 */
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: flex-end; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
-    .modal-overlay.active { display: flex; }
-    .modal { background: white; border-radius: 24px 24px 0 0; width: 100%; max-width: 500px; padding: 24px; padding-bottom: 40px; animation: slideUp 0.3s ease; }
-    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    #filterStatus { display:none; justify-content:space-between; align-items:center; margin-bottom:15px; }
   </style>
 </head>
 <body>
+<header class="header"><div class="logo">Smart Ledger Pro</div><div style="font-size:13px;font-weight:700;background:#EEF2FF;color:var(--primary);padding:5px 12px;border-radius:10px;">2026 Edition</div></header>
+<main class="main">
+  <div class="dashboard">
+    <div class="card"><span class="card-label">전체 총 지출</span><span class="card-value" id="total-amt">0원</span></div>
+    <div class="card" style="border-left:4px solid var(--success)"><span class="card-label">내 실제 지출</span><span class="card-value" id="real-amt">0원</span></div>
+    <div class="card" style="border-left:4px solid var(--gift)"><span class="card-label">상품권</span><span class="card-value" id="gift-amt">0원</span></div>
+  </div>
 
-  <header class="header">
-    <div class="logo">Smart Ledger Pro</div>
-    <div style="font-size: 13px; font-weight: 700; background: #EEF2FF; color: var(--primary); padding: 5px 12px; border-radius: 10px;">2026 Edition</div>
-  </header>
+  <div class="chart-container"><canvas id="mainChart" width="200" height="200"></canvas></div>
 
-  <main class="main">
-    <div class="dashboard">
-      <div class="card"><span class="card-label">전체 총 지출</span><span class="card-value" id="total-amt">0원</span></div>
-      <div class="card" style="border-left: 4px solid var(--success);"><span class="card-label">내 실제 지출 (상테크 제외)</span><span class="card-value" id="real-amt">0원</span></div>
-      <div class="card" style="border-left: 4px solid var(--gift);"><span class="card-label">상품권 (상테크)</span><span class="card-value" id="gift-amt">0원</span></div>
-    </div>
+  <div id="filterStatus"><span id="filterName" style="font-weight:800;color:var(--primary)"></span><button class="btn-reset" onclick="clearFilter()">✕ 필터 해제</button></div>
 
-    <div class="chart-container">
-      <canvas id="mainChart" width="200" height="200"></canvas>
-      <p style="font-size: 11px; color: #9CA3AF; margin-top: 15px;">차트 조각 클릭 시 해당 내역만 필터링됩니다.</p>
-    </div>
-
-    <div id="filterStatus">
-      <span id="filterName" style="font-weight: 800; color: var(--primary); font-size: 14px;"></span>
-      <button class="btn btn-reset" onclick="clearFilter()">✕ 전체 보기 (필터 해제)</button>
-    </div>
-
-    <div class="input-box">
-      <div class="tabs">
-        <div class="tab active" id="tab-auto" onclick="setTab('auto')">자동 입력</div>
-        <div class="tab" id="tab-manual" onclick="setTab('manual')">수동 입력</div>
+  <div class="input-box">
+    <div class="tabs"><div class="tab active" onclick="setTab('auto')">자동 입력</div><div class="tab" onclick="setTab('manual')">수동 입력</div></div>
+    <div id="view-auto"><textarea id="autoInput" placeholder="카드 내역 붙여넣기"></textarea><button class="btn btn-primary" onclick="processAuto()">자동 추가</button></div>
+    <div id="view-manual" style="display:none">
+      <div class="manual-form">
+        <input id="mStore" class="full" placeholder="가맹점" />
+        <input id="mAmt" type="number" placeholder="금액" />
+        <input id="mDate" type="date" />
+        <select id="mCard"><option>현대카드</option><option>현금</option></select>
+        <select id="mCat"><option value="food">식비</option><option value="shopping">쇼핑</option><option value="giftcard">상품권</option><option value="transport">교통</option><option value="etc">기타</option></select>
+        <button class="btn btn-primary full" onclick="processManual()">저장</button>
       </div>
+    </div>
+  </div>
+  <div id="listArea"></div>
+</main>
+<script>
+const STORAGE_KEY='sl_pro_v11';
+const CAT_LABELS={food:'식비',shopping:'쇼핑',giftcard:'상품권',transport:'교통',etc:'기타'};
+let saved=[];
+try{saved=JSON.parse(localStorage.getItem(STORAGE_KEY))||[]}catch(e){saved=[]}
+let state={list:saved,filter:null,chart:null};
 
-      <div id="view-auto">
-        <textarea id="autoInput" placeholder="카드 결제 내역을 붙여넣거나 업로드하세요..."></textarea>
-        <button class="btn btn-primary" onclick="processAuto()">✨ 자동 파싱 및 추가</button>
-      </div>
+const today=()=>new Date().toISOString().slice(0,10);
+document.getElementById('mDate').value=today();
 
-      <div id="view-manual" style="display:none;">
-        <div class="manual-form">
-          <input type="text" id="mStore" placeholder="가맹점 명칭" class="full">
-          <input type="number" id="mAmt" placeholder="결제 금액">
-          <input type="date" id="mDate" value="2026-01-25">
-          <select id="mCard">
-            <option value="현대카드">현대카드</option>
-            <option value="대한항공카드 150">대한항공카드 150</option>
-            <option value="아멕스 그린">아멕스 그린</option>
-            <option value="현금">현금/이체</option>
-          </select>
-          <select id="mCat">
-            <option value="food">식비</option>
-            <option value="shopping">쇼핑</option>
-            <option value="
+function setTab(t){document.getElementById('view-auto').style.display=t==='auto'?'block':'none';document.getElementById('view-manual').style.display=t==='manual'?'block':'none';}
+
+function autoCat(s){if(/상품권|쿠폰|페이/.test(s))return'giftcard';if(/식당|카페|배달|커피/.test(s))return'food';return'etc';}
+
+function processAuto(){const lines=document.getElementById('autoInput').value.split('\n');lines.forEach((l,i)=>{const m=l.match(/([0-9,]+)\s*원/);if(m){const amt=parseInt(m[1].replace(/,/g,''));const store=lines[i-1]||'알 수 없음';state.list.push({id:crypto.randomUUID(),date:today(),store,amt,card:'카드',cat:autoCat(store)});}});save();document.getElementById('autoInput').value='';}
+
+function processManual(){const store=mStore.value,amt=parseInt(mAmt.value);if(!store||!amt)return alert('입력 확인');state.list.push({id:crypto.randomUUID(),date:mDate.value,store,amt,card:mCard.value,cat:mCat.value});save();}
+
+function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state.list));render();}
+
+function render(){let total=0,real=0,gift=0,cats={};state.list.forEach(t=>{total+=t.amt;if(t.cat==='giftcard')gift+=t.amt;else{real+=t.amt;cats[t.cat]=(cats[t.cat]||0)+t.amt;}});totalAmt.textContent=total.toLocaleString()+'원';realAmt.textContent=real.toLocaleString()+'원';giftAmt.textContent=gift.toLocaleString()+'원';updateChart(cats,real);const list=(state.filter?state.list.filter(t=>t.cat===state.filter):state.list);listArea.innerHTML=list.map(t=>`<div class=list-item><div><span class="tag tag-${t.cat}">${CAT_LABELS[t.cat]}</span><b>${t.store}</b><div style="font-size:11px;color:#9CA3AF">${t.date} | ${t.card}</div></div><b>${t.amt.toLocaleString()}원</b></div>`).join('');}
+
+function updateChart(data,total){const ctx=mainChart.getContext('2d');if(state.chart)state.chart.destroy();const keys=Object.keys(data);state.chart=new Chart(ctx,{type:'doughnut',data:{labels:keys.map(k=>CAT_LABELS[k]),datasets:[{data:Object.values(data)}]},options:{cutout:'70%',onClick:(e,el)=>{if(el.length){state.filter=keys[el[0].index];filterStatus.style.display='flex';filterName.textContent=CAT_LABELS[state.filter]+' 지출';render();}}}});}
+function clearFilter(){state.filter=null;filterStatus.style.display='none';render();}
+render();
+</script>
+</body>
+</html>
