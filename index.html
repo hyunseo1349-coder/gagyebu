@@ -5,21 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>가계부</title>
 
-  <!-- Chart.js (GitHub Pages / https 환경에서 정상 동작) -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0984e3">
 
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; background:#f6f7f9; }
-    header { padding: 12px; background: #fff; border-bottom: 1px solid #ddd; }
-    .row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-    button { padding:8px 12px; font-size:14px; }
-    .container { padding: 12px; }
-    .card { background:#fff; border-radius:8px; padding:12px; margin-bottom:12px; }
-    input, select, textarea { width:100%; padding:8px; margin-top:6px; box-sizing:border-box; }
-    ul { list-style:none; padding:0; margin:0; }
-    li { padding:6px 0; border-bottom:1px solid #eee; }
-    .small { font-size:12px; color:#777; }
-  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
@@ -29,13 +19,26 @@
     <strong id="period"></strong>
     <button onclick="move('next')">▶</button>
   </div>
-  <div class="row" style="margin-top:8px">
+  <div class="row">
     <button onclick="setView('monthly')">월별</button>
     <button onclick="setView('yearly')">연간</button>
   </div>
 </header>
 
 <div class="container">
+  <div class="card">
+    <h4>설정</h4>
+    <label class="toggle">
+      <input type="checkbox" id="darkToggle" /> 다크모드
+    </label>
+  </div>
+
+  <div class="card">
+    <h4>카테고리 설정</h4>
+    <ul id="categoryList"></ul>
+    <input id="newCategory" placeholder="새 카테고리 이름" />
+    <button onclick="addCategory()">카테고리 추가</button>
+  </div>
 
   <div class="card">
     <h4>지출 입력</h4>
@@ -47,146 +50,101 @@
 
   <div class="card">
     <h4>카드 내역 붙여넣기</h4>
-    <textarea id="paste" rows="4" placeholder="카드 사용 내역 붙여넣기"></textarea>
+    <textarea id="paste" rows="4"></textarea>
     <button onclick="parsePaste()">분석 추가</button>
   </div>
 
   <div class="card">
     <h4>통계</h4>
-    <canvas id="chart"></canvas>
+    <canvas id="chartCanvas"></canvas>
   </div>
 
   <div class="card">
     <h4>내역</h4>
     <ul id="list"></ul>
   </div>
-
 </div>
 
 <script>
-// =============================
-// STATE
-// =============================
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js');
+}
+
 const state = {
+  darkMode: localStorage.getItem('dark') === 'true',
   viewMode: 'monthly',
   year: 2026,
   month: 1,
-  categories: [
-    { key:'food', label:'식비' },
-    { key:'transport', label:'교통' },
-    { key:'shopping', label:'쇼핑' },
-    { key:'etc', label:'기타' }
+  categories: JSON.parse(localStorage.getItem('categories')) || [
+    { key:'food', label:'식비', color:'#ff7675' },
+    { key:'transport', label:'교통', color:'#74b9ff' },
+    { key:'shopping', label:'쇼핑', color:'#a29bfe' },
+    { key:'etc', label:'기타', color:'#b2bec3' }
   ],
-  expenses: JSON.parse(localStorage.getItem('expenses')||'[]')
+  expenses: JSON.parse(localStorage.getItem('expenses')) || []
 };
 
-// =============================
-// NAV
-// =============================
-function setView(mode){ state.viewMode = mode; render(); }
+let chart;
 
-function move(dir){
+function setView(v){ state.viewMode=v; render(); }
+function move(d){
   if(state.viewMode==='monthly'){
-    if(dir==='prev'){
-      state.month--;
-      if(state.month===0){ state.month=12; state.year--; }
-    } else {
-      state.month++;
-      if(state.month===13){ state.month=1; state.year++; }
-    }
-  } else {
-    state.year += dir==='prev' ? -1 : 1;
-  }
+    state.month+=d==='prev'?-1:1;
+    if(state.month===0){state.month=12;state.year--;}
+    if(state.month===13){state.month=1;state.year++;}
+  } else state.year+=d==='prev'?-1:1;
   render();
 }
 
-// =============================
-// EXPENSE
-// =============================
+function addCategory(){
+  if(!newCategory.value.trim())return;
+  state.categories.push({key:newCategory.value.toLowerCase(),label:newCategory.value,color:'#999999'});
+  localStorage.setItem('categories',JSON.stringify(state.categories));
+  newCategory.value='';
+  render();
+}
+
 function addExpense(){
-  const amount = Number(amountEl.value);
-  if(!amount) return;
-
-  state.expenses.push({
-    amount,
-    category: categoryEl.value,
-    memo: memoEl.value,
-    year: state.year,
-    month: state.month
-  });
-
-  localStorage.setItem('expenses', JSON.stringify(state.expenses));
-  amountEl.value=''; memoEl.value='';
+  if(!amount.value)return;
+  state.expenses.push({amount:+amount.value,category:category.value,memo:memo.value,year:state.year,month:state.month});
+  localStorage.setItem('expenses',JSON.stringify(state.expenses));
+  amount.value='';memo.value='';
   render();
 }
 
 function parsePaste(){
-  const lines = paste.value.split('\n');
-  lines.forEach(l=>{
-    const m = l.match(/(\d+[,.]?\d*)/);
-    if(m){
-      state.expenses.push({
-        amount: Number(m[1].replace(',','')),
-        category:'etc',
-        memo:l,
-        year: state.year,
-        month: state.month
-      });
-    }
+  paste.value.split('\n').forEach(l=>{
+    const m=l.match(/(\d+[,.]?\d*)/);
+    if(!m)return;
+    state.expenses.push({amount:+m[1].replace(',',''),memo:l,category:'etc',year:state.year,month:state.month});
   });
-  localStorage.setItem('expenses', JSON.stringify(state.expenses));
+  localStorage.setItem('expenses',JSON.stringify(state.expenses));
   paste.value='';
   render();
 }
 
-// =============================
-// RENDER
-// =============================
-const periodEl = document.getElementById('period');
-const listEl = document.getElementById('list');
-const categoryEl = document.getElementById('category');
-const amountEl = document.getElementById('amount');
-const memoEl = document.getElementById('memo');
-const paste = document.getElementById('paste');
-
-let chart;
-
 function render(){
-  periodEl.textContent = state.viewMode==='monthly'
-    ? `${state.year}년 ${state.month}월`
-    : `${state.year}년`;
+  document.documentElement.classList.toggle('dark',state.darkMode);
+  darkToggle.checked=state.darkMode;
+  period.textContent=state.viewMode==='monthly'?`${state.year}년 ${state.month}월`:`${state.year}년`;
 
-  categoryEl.innerHTML = state.categories.map(c=>
-    `<option value="${c.key}">${c.label}</option>`
-  ).join('');
+  category.innerHTML=state.categories.map(c=>`<option value="${c.key}">${c.label}</option>`).join('');
+  categoryList.innerHTML=state.categories.map(c=>`<li class="category-item"><span class="color-dot" style="background:${c.color}"></span>${c.label}</li>`).join('');
 
-  listEl.innerHTML='';
-  const filtered = state.expenses.filter(e=>
-    state.viewMode==='monthly'
-      ? e.year===state.year && e.month===state.month
-      : e.year===state.year
-  );
-
-  const summary = {};
-  state.categories.forEach(c=>summary[c.key]=0);
-
-  filtered.forEach(e=>{
-    summary[e.category]+=e.amount;
-    listEl.innerHTML+=`<li>${e.memo||''} - ${e.amount.toLocaleString()}원</li>`;
-  });
-
-  if(chart) chart.destroy();
-  if(typeof Chart!=='undefined'){
-    chart = new Chart(document.getElementById('chart'),{
-      type:'pie',
-      data:{ labels:Object.keys(summary), datasets:[{ data:Object.values(summary) }] },
-      options:{ plugins:{ legend:{ position:'bottom' } } }
+  list.innerHTML='';
+  const sum={}; state.categories.forEach(c=>sum[c.key]=0);
+  state.expenses.filter(e=>state.viewMode==='monthly'?e.year===state.year&&e.month===state.month:e.year===state.year)
+    .forEach(e=>{
+      sum[e.category]+=e.amount;
+      list.innerHTML+=`<li class="expense-item"><span>${e.memo}</span><span class="badge" style="background:${state.categories.find(c=>c.key===e.category).color}">${e.amount.toLocaleString()}원</span></li>`;
     });
-  }
+
+  if(chart)chart.destroy();
+  chart=new Chart(chartCanvas,{type:'pie',data:{labels:state.categories.map(c=>c.label),datasets:[{data:state.categories.map(c=>sum[c.key]),backgroundColor:state.categories.map(c=>c.color)}]},options:{plugins:{legend:{position:'bottom'}}}});
 }
 
+darkToggle.onchange=()=>{state.darkMode=darkToggle.checked;localStorage.setItem('dark',state.darkMode);render();};
 render();
 </script>
-
 </body>
 </html>
