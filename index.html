@@ -1,228 +1,81 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>가계부</title>
-
-  <!-- PWA -->
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#5b6cff" />
-
-  <!-- Chart.js (GitHub Pages 안전 CDN) -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-
-  <!-- Style -->
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Ledger - 스마트 가계부</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-<header class="top">
-  <div class="period">
-    <button id="prevBtn">◀</button>
-    <strong id="periodText">2026년 1월</strong>
-    <button id="nextBtn">▶</button>
-  </div>
+  <header class="header">
+    <div class="header-left">
+      <div class="logo-icon">S</div>
+      <div>
+        <span class="logo-title">Smart Ledger</span>
+        <span class="logo-sub">상테크 & 정산 관리</span>
+      </div>
+    </div>
+  </header>
 
-  <div class="view-toggle">
-    <button id="monthlyBtn" class="active">월별</button>
-    <button id="yearlyBtn">연간</button>
-  </div>
-</header>
+  <main class="main">
+    <div class="title-section">
+      <div>
+        <h1 class="page-title" id="monthDisplay">2025년 1월</h1>
+        <p class="page-subtitle">체계적인 자산 관리를 시작하세요.</p>
+      </div>
+      <label class="toggle-label" onclick="toggleGiftcard()">
+        <span class="page-subtitle" style="font-weight:600">상품권 포함</span>
+        <div class="toggle" id="gcToggle"><div class="toggle-knob"></div></div>
+      </label>
+    </div>
 
-<main class="container">
+    <div class="summary-grid">
+      <div class="summary-card card-blue" style="animation-delay: 0.1s">
+        <span class="card-label">총 지출</span>
+        <span class="card-value" id="totalAmount">0원</span>
+      </div>
+      <div class="summary-card card-purple" style="animation-delay: 0.2s">
+        <span class="card-label">실제 생활비</span>
+        <span class="card-value" id="livingAmount">0원</span>
+      </div>
+      <div class="summary-card card-green" style="animation-delay: 0.3s">
+        <span class="card-label">💰 내 실제 부담</span>
+        <span class="card-value" id="myAmount">0원</span>
+      </div>
+      <div class="summary-card card-yellow" style="animation-delay: 0.4s">
+        <span class="card-label">✈️ 상품권 마일리지</span>
+        <span class="card-value" id="giftcardAmount">0원</span>
+        <span class="card-sub">상테크 단가 확인</span>
+      </div>
+    </div>
 
-  <!-- 설정 -->
-  <section class="card">
-    <h3>설정</h3>
-    <label class="toggle">
-      <input type="checkbox" id="darkToggle" />
-      <span>다크모드</span>
-    </label>
-  </section>
+    <div class="transaction-section">
+      <h3 style="margin-bottom: 20px; font-weight: 700;">최근 지출 내역</h3>
+      <div id="transactionList">
+        </div>
+    </div>
+  </main>
 
-  <!-- 지출 입력 -->
-  <section class="card">
-    <h3>지출 입력</h3>
-    <input id="amount" type="number" placeholder="금액" />
-    <select id="category"></select>
-    <input id="memo" placeholder="메모" />
-    <button id="addBtn">추가</button>
-  </section>
+  <button class="fab" onclick="openModal()">+</button>
 
-  <!-- 통계 -->
-  <section class="card">
-    <h3>통계</h3>
-    <canvas id="chart" height="260"></canvas>
-  </section>
-
-  <!-- 내역 -->
-  <section class="card">
-    <h3>내역</h3>
-    <ul id="list"></ul>
-  </section>
-
-</main>
-
-<script>
-/* ======================
-   STATE
-====================== */
-const state = {
-  year: 2026,
-  month: 1,
-  view: 'monthly',
-  dark: localStorage.getItem('dark') === 'true',
-  categories: [
-    { key:'food', label:'식비', color:'#ff7675' },
-    { key:'transport', label:'교통', color:'#74b9ff' },
-    { key:'shopping', label:'쇼핑', color:'#55efc4' },
-    { key:'etc', label:'기타', color:'#a29bfe' }
-  ],
-  expenses: JSON.parse(localStorage.getItem('expenses') || '[]')
-};
-
-/* ======================
-   ELEMENTS
-====================== */
-const periodText = document.getElementById('periodText');
-const categoryEl = document.getElementById('category');
-const listEl = document.getElementById('list');
-const darkToggle = document.getElementById('darkToggle');
-
-let chart;
-
-/* ======================
-   INIT
-====================== */
-function init(){
-  darkToggle.checked = state.dark;
-  document.documentElement.classList.toggle('dark', state.dark);
-
-  categoryEl.innerHTML = state.categories
-    .map(c => `<option value="${c.key}">${c.label}</option>`)
-    .join('');
-
-  render();
-}
-init();
-
-/* ======================
-   RENDER
-====================== */
-function render(){
-  periodText.textContent =
-    state.view === 'monthly'
-      ? `${state.year}년 ${state.month}월`
-      : `${state.year}년`;
-
-  const filtered = state.expenses.filter(e =>
-    state.view === 'monthly'
-      ? e.year === state.year && e.month === state.month
-      : e.year === state.year
-  );
-
-  // list
-  listEl.innerHTML = '';
-  filtered.forEach(e => {
-    const cat = state.categories.find(c => c.key === e.category);
-    listEl.innerHTML += `
-      <li>
-        <span>${e.memo || ''}</span>
-        <strong style="color:${cat.color}">
-          ${e.amount.toLocaleString()}원
-        </strong>
-      </li>
-    `;
-  });
-
-  // chart
-  const sum = {};
-  state.categories.forEach(c => sum[c.key] = 0);
-  filtered.forEach(e => sum[e.category] += e.amount);
-
-  if(chart) chart.destroy();
-  chart = new Chart(document.getElementById('chart'), {
-    type: 'pie',
-    data: {
-      labels: state.categories.map(c => c.label),
-      datasets: [{
-        data: state.categories.map(c => sum[c.key]),
-        backgroundColor: state.categories.map(c => c.color)
-      }]
-    },
-    options: {
-      plugins: {
-        legend: { position: 'bottom' }
-      }
-    }
-  });
-}
-
-/* ======================
-   EVENTS
-====================== */
-document.getElementById('prevBtn').onclick = () => {
-  if(state.view === 'monthly'){
-    state.month--;
-    if(state.month === 0){ state.month = 12; state.year--; }
-  } else {
-    state.year--;
-  }
-  render();
-};
-
-document.getElementById('nextBtn').onclick = () => {
-  if(state.view === 'monthly'){
-    state.month++;
-    if(state.month === 13){ state.month = 1; state.year++; }
-  } else {
-    state.year++;
-  }
-  render();
-};
-
-document.getElementById('monthlyBtn').onclick = () => {
-  state.view = 'monthly';
-  render();
-};
-
-document.getElementById('yearlyBtn').onclick = () => {
-  state.view = 'yearly';
-  render();
-};
-
-document.getElementById('addBtn').onclick = () => {
-  const amount = Number(amount.value);
-  if(!amount) return;
-
-  state.expenses.push({
-    amount,
-    category: categoryEl.value,
-    memo: memo.value,
-    year: state.year,
-    month: state.month
-  });
-
-  localStorage.setItem('expenses', JSON.stringify(state.expenses));
-  amount.value = '';
-  memo.value = '';
-  render();
-};
-
-darkToggle.onchange = () => {
-  state.dark = darkToggle.checked;
-  localStorage.setItem('dark', state.dark);
-  document.documentElement.classList.toggle('dark', state.dark);
-};
-
-/* ======================
-   SERVICE WORKER
-====================== */
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js');
-}
-</script>
-
-</body>
-</html>
+  <div class="modal-overlay" id="modalOverlay" onclick="closeModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h2>지출 내역 추가</h2>
+      <div class="form-group">
+        <label>날짜</label>
+        <input type="date" id="inputDate">
+        
+        <label>가맹점명</label>
+        <input type="text" id="inputStore" placeholder="어디서 쓰셨나요?">
+        
+        <label>금액</label>
+        <input type="number" id="inputAmount" placeholder="0">
+        
+        <label>카테고리</label>
+        <select id="inputCategory">
+          <option value="food">🍴 식비</option>
+          <option value="shopping">🛍️ 쇼핑</option>
+          <option value="giftcard">🎫
