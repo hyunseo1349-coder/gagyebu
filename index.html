@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart Ledger - 스마트 가계부</title>
+  <title>Smart Ledger 2026</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -13,47 +13,45 @@
   <header class="header">
     <div class="header-left">
       <div class="logo-icon">S</div>
-      <div>
-        <span class="logo-title">Smart Ledger</span>
-        <span class="logo-sub">상테크 & 정산 관리</span>
+      <div><span class="logo-title">Smart Ledger</span><span class="logo-sub">2026 자산관리</span></div>
+    </div>
+    
+    <div class="date-nav">
+      <div class="nav-group">
+        <button onclick="changeYear(-1)">◀</button>
+        <span id="yearDisplay">2026년</span>
+        <button onclick="changeYear(1)">▶</button>
+      </div>
+      <div class="nav-group">
+        <button onclick="changeMonth(-1)">◀</button>
+        <span id="monthDisplay">1월</span>
+        <button onclick="changeMonth(1)">▶</button>
       </div>
     </div>
   </header>
 
   <main class="main">
-    <div class="title-section">
-      <div>
-        <h1 class="page-title" id="monthDisplay">2025년 1월</h1>
-        <p class="page-subtitle">체계적인 자산 관리를 시작하세요.</p>
-      </div>
-      <label class="toggle-label" onclick="toggleGiftcard()">
-        <span class="page-subtitle" style="font-weight:600">상품권 포함</span>
-        <div class="toggle" id="gcToggle"><div class="toggle-knob"></div></div>
-      </label>
-    </div>
-
     <div class="summary-grid">
       <div class="summary-card card-blue" style="animation-delay: 0.1s">
-        <span class="card-label">총 지출</span>
+        <span class="card-label">이번 달 총 지출</span>
         <span class="card-value" id="totalAmount">0원</span>
       </div>
-      <div class="summary-card card-purple" style="animation-delay: 0.2s">
-        <span class="card-label">실제 생활비</span>
-        <span class="card-value" id="livingAmount">0원</span>
-      </div>
-      <div class="summary-card card-green" style="animation-delay: 0.3s">
-        <span class="card-label">💰 내 실제 부담</span>
+      <div class="summary-card card-green" style="animation-delay: 0.2s">
+        <span class="card-label">💰 내 실제 부담 (정산 후)</span>
         <span class="card-value" id="myAmount">0원</span>
       </div>
-      <div class="summary-card card-yellow" style="animation-delay: 0.4s">
-        <span class="card-label">✈️ 상품권 마일리지</span>
+      <div class="summary-card card-yellow" style="animation-delay: 0.3s" onclick="openMileModal()">
+        <span class="card-label">✈️ 상테크 마일리지</span>
         <span class="card-value" id="giftcardAmount">0원</span>
-        <span class="card-sub">상테크 단가 확인</span>
+        <span class="card-sub">마일리지 단가 계산기</span>
       </div>
     </div>
 
     <div class="transaction-section">
-      <h3 style="margin-bottom: 20px; font-weight: 700;">최근 지출 내역</h3>
+      <div class="section-header">
+        <h3>지출 내역</h3>
+        <button class="btn-filter" onclick="toggleGiftcard()" id="gcFilterBtn">상품권 포함됨</button>
+      </div>
       <div id="transactionList">
         </div>
     </div>
@@ -63,19 +61,46 @@
 
   <div class="modal-overlay" id="modalOverlay" onclick="closeModal()">
     <div class="modal" onclick="event.stopPropagation()">
-      <h2>지출 내역 추가</h2>
+      <h2>새 지출 기록</h2>
       <div class="form-group">
         <label>날짜</label>
         <input type="date" id="inputDate">
-        
-        <label>가맹점명</label>
-        <input type="text" id="inputStore" placeholder="어디서 쓰셨나요?">
-        
+        <label>가맹점</label>
+        <input type="text" id="inputStore" placeholder="어디서 사용하셨나요?">
         <label>금액</label>
-        <input type="number" id="inputAmount" placeholder="0">
-        
+        <input type="number" id="inputAmount" placeholder="원 단위로 입력">
         <label>카테고리</label>
         <select id="inputCategory">
           <option value="food">🍴 식비</option>
           <option value="shopping">🛍️ 쇼핑</option>
-          <option value="giftcard">🎫
+          <option value="giftcard">🎫 상품권 (상테크)</option>
+          <option value="transport">🚌 교통</option>
+          <option value="etc">🎸 기타</option>
+        </select>
+        <div class="split-box" style="margin-top:10px;">
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+            <input type="checkbox" id="isSplit" style="width:18px; height:18px;"> 
+            <span>1/N 정산하기 (50%만 내 부담)</span>
+          </label>
+        </div>
+        <button class="btn-primary" onclick="submitTransaction()" style="margin-top:15px;">기록하기</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="mileModal" onclick="closeMileModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h2>✈️ 상테크 마일리지 계산기</h2>
+      <div class="form-group" style="margin-top:15px;">
+        <input type="number" id="mileBuy" placeholder="상품권 구매가 (예: 46300)">
+        <input type="number" id="mileSell" placeholder="현금화 금액 (예: 46000)">
+        <input type="number" id="milePoint" placeholder="적립 마일리지 (예: 15)">
+        <div class="calc-result" id="mileResult">수치를 입력하고 계산을 누르세요.</div>
+        <button class="btn-primary" onclick="calcMile()">계산하기</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
