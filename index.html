@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart Ledger 2026 (Gagyebu Style)</title>
+  <title>Smart Ledger 2026</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -13,7 +13,7 @@
   <header class="header">
     <div class="header-left">
       <div class="logo-icon">S</div>
-      <div><span class="logo-title">Smart Ledger</span><span class="logo-sub">2026 Asset & Split</span></div>
+      <div><span class="logo-title">Smart Ledger</span><span class="logo-sub">2026 Premium Asset</span></div>
     </div>
     <div class="date-nav">
       <div class="nav-group">
@@ -36,23 +36,22 @@
         <span class="card-value" id="totalAmount">0원</span>
       </div>
       <div class="summary-card card-sub">
-        <span class="card-label">💰 내 실제 부담 (정산 후)</span>
+        <span class="card-label">💰 내 실질 부담액</span>
         <span class="card-value color-primary" id="myAmount">0원</span>
       </div>
       <div class="summary-card card-gift" onclick="openMileModal()">
-        <span class="card-label">🎫 상테크 (상품권)</span>
+        <span class="card-label">🎫 상테크 현황</span>
         <span class="card-value color-gift" id="giftcardAmount">0원</span>
-        <span class="card-link">단가 계산기 ></span>
+        <span class="card-link">계산기 열기 ></span>
       </div>
     </div>
 
     <div class="content-container">
       <div class="list-header">
-        <h3>소비 내역</h3>
-        <button class="filter-btn active" id="gcFilterBtn" onclick="toggleGiftcard()">상품권 포함</button>
+        <h3>상세 소비 내역</h3>
+        <button class="filter-btn active" id="gcFilterBtn" onclick="toggleGiftcard()">상품권 포함됨</button>
       </div>
-      <div id="transactionList" class="transaction-list">
-        </div>
+      <div id="transactionList" class="transaction-list"></div>
     </div>
   </main>
 
@@ -70,34 +69,33 @@
           <input type="date" id="inputDate">
         </div>
         <div class="input-row">
-          <label>가맹점</label>
-          <input type="text" id="inputStore" placeholder="어디서 쓰셨나요?">
-        </div>
-        <div class="input-row">
-          <label>금액</label>
-          <input type="number" id="inputAmount" placeholder="0">
-        </div>
-        <div class="input-row">
-          <label>카드/결제</label>
-          <select id="inputCard">
-            <option value="우리">우리</option>
-            <option value="삼성">삼성</option>
-            <option value="현대">현대</option>
-            <option value="신한">신한</option>
-            <option value="기타">기타</option>
-          </select>
+          <label>카드 선택</label>
+          <div class="selector-grid" id="cardSelector">
+            <button class="select-item active" onclick="selectCard(this, '우리')">우리</button>
+            <button class="select-item" onclick="selectCard(this, '삼성')">삼성</button>
+            <button class="select-item" onclick="selectCard(this, '현대')">현대</button>
+            <button class="select-item" onclick="selectCard(this, '신한')">신한</button>
+          </div>
         </div>
         <div class="input-row">
           <label>카테고리</label>
-          <div class="category-grid">
-            <label><input type="radio" name="cat" value="food" checked> 🍴 식비</label>
-            <label><input type="radio" name="cat" value="shopping"> 🛍️ 쇼핑</label>
-            <label><input type="radio" name="cat" value="giftcard"> 🎫 상품권</label>
-            <label><input type="radio" name="cat" value="transport"> 🚌 교통</label>
+          <div class="selector-grid" id="categorySelector">
+            <button class="select-item active" onclick="selectCategory(this, 'food')">🍴 식비</button>
+            <button class="select-item" onclick="selectCategory(this, 'shopping')">🛍️ 쇼핑</button>
+            <button class="select-item" onclick="selectCategory(this, 'giftcard')">🎫 상품권</button>
+            <button class="select-item" onclick="selectCategory(this, 'transport')">🚌 교통</button>
           </div>
         </div>
-        <div class="split-option">
-          <label><input type="checkbox" id="isSplit"> 1/N 정산 (나 50% / 상대 50%)</label>
+        <div class="input-row">
+          <label>가맹점 및 금액</label>
+          <input type="text" id="inputStore" placeholder="가맹점 이름" style="margin-bottom: 8px;">
+          <input type="number" id="inputAmount" placeholder="금액 (원)">
+        </div>
+        <div class="split-section">
+          <label class="toggle-row">
+            <span>1/N 정산 사용</span>
+            <input type="checkbox" id="isSplit">
+          </label>
         </div>
         <button class="submit-btn" onclick="submitTransaction()">저장하기</button>
       </div>
