@@ -1,1 +1,115 @@
-/* same as provided */
+:root {
+  --bg: #f5f6f8;
+  --card: #ffffff;
+  --text: #111;
+  --muted: #666;
+
+  --food: #ff7675;
+  --transport: #74b9ff;
+  --shopping: #55efc4;
+  --etc: #ffeaa7;
+}
+
+.dark {
+  --bg: #121212;
+  --card: #1e1e1e;
+  --text: #f1f1f1;
+  --muted: #aaa;
+}
+
+* {
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+header {
+  background: var(--card);
+  padding: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+header .row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+button {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background: var(--card);
+  cursor: pointer;
+}
+
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 12px;
+}
+
+.card {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+h4 {
+  margin: 0 0 8px;
+}
+
+input, select, textarea {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 6px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.expense-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.badge {
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.badge.food { background: var(--food); }
+.badge.transport { background: var(--transport); }
+.badge.shopping { background: var(--shopping); }
+.badge.etc { background: var(--etc); }
+
+.filter-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #eee;
+  padding: 6px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.dark .filter-bar {
+  background: #2a2a2a;
+}
