@@ -7,34 +7,32 @@
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#4f46e5" />
+  <meta name="theme-color" content="#5b6cff" />
 
-  <!-- Font -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- Chart.js (GitHub Pages 안전 CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
-  <!-- CSS -->
+  <!-- Style -->
   <link rel="stylesheet" href="style.css" />
-
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
-
 <header class="top">
-  <button onclick="move(-1)">◀</button>
-  <strong id="period"></strong>
-  <button onclick="move(1)">▶</button>
-</header>
+  <div class="period">
+    <button id="prevBtn">◀</button>
+    <strong id="periodText">2026년 1월</strong>
+    <button id="nextBtn">▶</button>
+  </div>
 
-<div class="view-switch">
-  <button onclick="setView('month')">월별</button>
-  <button onclick="setView('year')">연간</button>
-</div>
+  <div class="view-toggle">
+    <button id="monthlyBtn" class="active">월별</button>
+    <button id="yearlyBtn">연간</button>
+  </div>
+</header>
 
 <main class="container">
 
+  <!-- 설정 -->
   <section class="card">
     <h3>설정</h3>
     <label class="toggle">
@@ -43,117 +41,185 @@
     </label>
   </section>
 
+  <!-- 지출 입력 -->
   <section class="card">
     <h3>지출 입력</h3>
     <input id="amount" type="number" placeholder="금액" />
-    <select id="category">
-      <option value="식비">식비</option>
-      <option value="교통">교통</option>
-      <option value="쇼핑">쇼핑</option>
-      <option value="기타">기타</option>
-    </select>
+    <select id="category"></select>
     <input id="memo" placeholder="메모" />
-    <button onclick="addExpense()">추가</button>
+    <button id="addBtn">추가</button>
   </section>
 
+  <!-- 통계 -->
   <section class="card">
     <h3>통계</h3>
-    <canvas id="chart"></canvas>
+    <canvas id="chart" height="260"></canvas>
+  </section>
+
+  <!-- 내역 -->
+  <section class="card">
+    <h3>내역</h3>
+    <ul id="list"></ul>
   </section>
 
 </main>
 
 <script>
-/* ===== 상태 ===== */
-let year = 2026, month = 1, view = 'month';
-let expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
-
-/* ===== 다크모드 ===== */
-const darkToggle = document.getElementById('darkToggle');
-const savedDark = localStorage.getItem('dark') === 'true';
-document.documentElement.classList.toggle('dark', savedDark);
-darkToggle.checked = savedDark;
-
-darkToggle.onchange = () => {
-  document.documentElement.classList.toggle('dark', darkToggle.checked);
-  localStorage.setItem('dark', darkToggle.checked);
+/* ======================
+   STATE
+====================== */
+const state = {
+  year: 2026,
+  month: 1,
+  view: 'monthly',
+  dark: localStorage.getItem('dark') === 'true',
+  categories: [
+    { key:'food', label:'식비', color:'#ff7675' },
+    { key:'transport', label:'교통', color:'#74b9ff' },
+    { key:'shopping', label:'쇼핑', color:'#55efc4' },
+    { key:'etc', label:'기타', color:'#a29bfe' }
+  ],
+  expenses: JSON.parse(localStorage.getItem('expenses') || '[]')
 };
 
-/* ===== 날짜 ===== */
-function renderPeriod() {
-  document.getElementById('period').textContent =
-    view === 'month' ? `${year}년 ${month}월` : `${year}년`;
-}
-renderPeriod();
-
-function move(diff) {
-  if (view === 'month') {
-    month += diff;
-    if (month < 1) { month = 12; year--; }
-    if (month > 12) { month = 1; year++; }
-  } else {
-    year += diff;
-  }
-  renderPeriod();
-  renderChart();
-}
-
-function setView(v) {
-  view = v;
-  renderPeriod();
-  renderChart();
-}
-
-/* ===== 지출 ===== */
-function addExpense() {
-  const amount = +amountEl.value;
-  if (!amount) return;
-
-  expenses.push({
-    amount,
-    category: categoryEl.value,
-    year, month
-  });
-  localStorage.setItem('expenses', JSON.stringify(expenses));
-  amountEl.value = memoEl.value = '';
-  renderChart();
-}
-
-const amountEl = document.getElementById('amount');
+/* ======================
+   ELEMENTS
+====================== */
+const periodText = document.getElementById('periodText');
 const categoryEl = document.getElementById('category');
-const memoEl = document.getElementById('memo');
+const listEl = document.getElementById('list');
+const darkToggle = document.getElementById('darkToggle');
 
-/* ===== 차트 ===== */
 let chart;
-function renderChart() {
-  const sum = { 식비:0, 교통:0, 쇼핑:0, 기타:0 };
 
-  expenses.filter(e =>
-    view === 'month'
-      ? e.year === year && e.month === month
-      : e.year === year
-  ).forEach(e => sum[e.category] += e.amount);
+/* ======================
+   INIT
+====================== */
+function init(){
+  darkToggle.checked = state.dark;
+  document.documentElement.classList.toggle('dark', state.dark);
 
-  if (chart) chart.destroy();
+  categoryEl.innerHTML = state.categories
+    .map(c => `<option value="${c.key}">${c.label}</option>`)
+    .join('');
+
+  render();
+}
+init();
+
+/* ======================
+   RENDER
+====================== */
+function render(){
+  periodText.textContent =
+    state.view === 'monthly'
+      ? `${state.year}년 ${state.month}월`
+      : `${state.year}년`;
+
+  const filtered = state.expenses.filter(e =>
+    state.view === 'monthly'
+      ? e.year === state.year && e.month === state.month
+      : e.year === state.year
+  );
+
+  // list
+  listEl.innerHTML = '';
+  filtered.forEach(e => {
+    const cat = state.categories.find(c => c.key === e.category);
+    listEl.innerHTML += `
+      <li>
+        <span>${e.memo || ''}</span>
+        <strong style="color:${cat.color}">
+          ${e.amount.toLocaleString()}원
+        </strong>
+      </li>
+    `;
+  });
+
+  // chart
+  const sum = {};
+  state.categories.forEach(c => sum[c.key] = 0);
+  filtered.forEach(e => sum[e.category] += e.amount);
+
+  if(chart) chart.destroy();
   chart = new Chart(document.getElementById('chart'), {
-    type: 'doughnut',
+    type: 'pie',
     data: {
-      labels: Object.keys(sum),
+      labels: state.categories.map(c => c.label),
       datasets: [{
-        data: Object.values(sum),
-        backgroundColor: ['#f97316','#3b82f6','#22c55e','#a855f7']
+        data: state.categories.map(c => sum[c.key]),
+        backgroundColor: state.categories.map(c => c.color)
       }]
     },
     options: {
-      cutout: '65%',
-      plugins: { legend: { position: 'bottom' } }
+      plugins: {
+        legend: { position: 'bottom' }
+      }
     }
   });
 }
-renderChart();
 
-/* ===== PWA ===== */
-if ('serviceWorker' in navigator) {
+/* ======================
+   EVENTS
+====================== */
+document.getElementById('prevBtn').onclick = () => {
+  if(state.view === 'monthly'){
+    state.month--;
+    if(state.month === 0){ state.month = 12; state.year--; }
+  } else {
+    state.year--;
+  }
+  render();
+};
+
+document.getElementById('nextBtn').onclick = () => {
+  if(state.view === 'monthly'){
+    state.month++;
+    if(state.month === 13){ state.month = 1; state.year++; }
+  } else {
+    state.year++;
+  }
+  render();
+};
+
+document.getElementById('monthlyBtn').onclick = () => {
+  state.view = 'monthly';
+  render();
+};
+
+document.getElementById('yearlyBtn').onclick = () => {
+  state.view = 'yearly';
+  render();
+};
+
+document.getElementById('addBtn').onclick = () => {
+  const amount = Number(amount.value);
+  if(!amount) return;
+
+  state.expenses.push({
+    amount,
+    category: categoryEl.value,
+    memo: memo.value,
+    year: state.year,
+    month: state.month
+  });
+
+  localStorage.setItem('expenses', JSON.stringify(state.expenses));
+  amount.value = '';
+  memo.value = '';
+  render();
+};
+
+darkToggle.onchange = () => {
+  state.dark = darkToggle.checked;
+  localStorage.setItem('dark', state.dark);
+  document.documentElement.classList.toggle('dark', state.dark);
+};
+
+/* ======================
+   SERVICE WORKER
+====================== */
+if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js');
 }
 </script>
