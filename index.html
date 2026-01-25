@@ -3,119 +3,315 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart Ledger 2026</title>
+  <title>Smart Ledger 2026 Pro</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <style>
+    /* [기존 스타일 유지 및 개선] */
+    :root { --primary: #6366F1; --bg: #F9FAFB; --danger: #EF4444; --success: #10B981; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: #1F2937; line-height: 1.5; }
+    
+    .header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: white; border-bottom: 1px solid #E5E7EB; position: sticky; top: 0; z-index: 100; }
+    .view-toggle { display: flex; background: #F3F4F6; padding: 4px; border-radius: 12px; }
+    .view-toggle button { padding: 8px 24px; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; transition: 0.2s; }
+    .view-toggle button.active { background: white; color: var(--primary); shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+    .main { max-width: 900px; margin: 0 auto; padding: 24px; }
+    
+    /* 대시보드 카드 */
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .card { background: white; padding: 20px; border-radius: 20px; border: 1px solid #E5E7EB; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
+    .card-label { font-size: 13px; color: #6B7280; display: block; margin-bottom: 8px; }
+    .card-value { font-size: 20px; font-weight: 700; }
+
+    /* 하단 네비게이션 및 필터 */
+    .list-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: white; padding: 16px; border-radius: 16px; border: 1px solid #E5E7EB; }
+    .nav-group { display: flex; align-items: center; gap: 12px; }
+    .nav-btn { width: 32px; height: 32px; border: 1px solid #E5E7EB; background: white; border-radius: 8px; cursor: pointer; }
+    .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .current-period { font-weight: 700; font-size: 16px; min-width: 100px; text-align: center; }
+
+    /* 빠른 입력 섹션 */
+    .quick-input-area { background: white; border-radius: 20px; padding: 24px; margin-bottom: 32px; border: 1px solid #E5E7EB; }
+    .btn-group { display: flex; gap: 10px; margin-top: 15px; }
+    .btn { padding: 12px 20px; border-radius: 12px; border: none; cursor: pointer; font-weight: 600; font-size: 14px; }
+    .btn-outline { background: #F3F4F6; color: #4B5563; }
+    .btn-primary { background: var(--primary); color: white; flex: 1; }
+    
+    textarea { width: 100%; height: 80px; padding: 15px; border-radius: 12px; border: 1px solid #E5E7EB; background: #F9FAFB; resize: none; font-family: inherit; }
+
+    /* 정산 검증 스타일 */
+    .validate-badge { font-size: 11px; padding: 2px 6px; border-radius: 4px; margin-left: 8px; }
+    .bad { background: #FEE2E2; color: #EF4444; }
+    .good { background: #D1FAE5; color: #059669; }
+
+    /* 모달 */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
+    .modal-overlay.active { display: flex; }
+    .modal { background: white; border-radius: 24px; width: 90%; max-width: 500px; padding: 24px; max-height: 90vh; overflow-y: auto; }
+    
+    .preview-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+    .preview-table th { text-align: left; padding: 8px; background: #F3F4F6; }
+    .preview-table td { padding: 8px; border-bottom: 1px solid #F3F4F6; }
+
+    .fab { position: fixed; bottom: 24px; right: 24px; width: 60px; height: 60px; border-radius: 30px; background: var(--primary); color: white; border: none; font-size: 24px; box-shadow: 0 4px 15px rgba(99,102,241,0.4); cursor: pointer; }
+
+    @media (max-width: 600px) {
+      .summary-grid { grid-template-columns: 1fr; }
+      .list-controls { flex-direction: column; gap: 15px; }
+    }
+  </style>
 </head>
 <body>
+
   <header class="header">
-    <div class="header-left">
-      <div class="logo-icon">S</div>
-      <div>
-        <span class="logo-title">Smart Ledger</span>
-        <span class="logo-sub">2026 Asset Management</span>
-      </div>
-    </div>
-    <div class="date-nav">
-      <div class="nav-group">
-        <button onclick="changeYear(-1)">◀</button>
-        <span id="yearDisplay">2026년</span>
-        <button onclick="changeYear(1)">▶</button>
-      </div>
-      <div class="nav-group">
-        <button onclick="changeMonth(-1)">◀</button>
-        <span id="monthDisplay">1월</span>
-        <button onclick="changeMonth(1)">▶</button>
-      </div>
+    <div style="font-weight: 800; color: var(--primary); font-size: 20px;">Smart Ledger</div>
+    <div class="view-toggle">
+      <button id="btn-monthly" class="active" onclick="setView('monthly')">월간</button>
+      <button id="btn-yearly" onclick="setView('yearly')">연간</button>
     </div>
   </header>
 
   <main class="main">
-    <div class="summary-grid">
-      <div class="summary-card card-blue">
+    <div class="summary-grid" id="summaryGrid">
+      <div class="card">
         <span class="card-label">총 지출</span>
-        <span class="card-value" id="totalAmount">0원</span>
+        <span class="card-value" id="stat-total">0원</span>
       </div>
-      <div class="summary-card card-purple">
-        <span class="card-label">실제 생활비</span>
-        <span class="card-value" id="livingAmount">0원</span>
-      </div>
-      <div class="summary-card card-green">
+      <div class="card">
         <span class="card-label">💰 내 실제 부담</span>
-        <span class="card-value" id="myAmount">0원</span>
+        <span class="card-value" id="stat-my">0원</span>
       </div>
-      <div class="summary-card card-yellow" onclick="openMileModal()">
-        <span class="card-label">✈️ 상테크 현황</span>
-        <span class="card-value" id="giftcardAmount">0원</span>
-        <span class="card-sub">상세 계산기 열기 ></span>
+      <div class="card">
+        <span class="card-label">✈️ 마일리지 적립</span>
+        <span class="card-value" id="stat-mile">0 마일</span>
       </div>
     </div>
 
-    <div class="transaction-section">
-      <div class="section-header">
-        <h3>지출 내역</h3>
-        <button class="filter-btn active" id="gcFilterBtn" onclick="toggleGiftcard()">상품권 포함됨</button>
+    <div class="quick-input-area" id="quickInputArea">
+      <div style="margin-bottom: 12px;">
+        <h3 style="font-size: 16px;">빠른 입력</h3>
+        <p style="font-size: 12px; color: #6B7280;">카드 결제 문자를 여러 줄 붙여넣으세요.</p>
       </div>
-      <div id="transactionList"></div>
+      <textarea id="rawInput" placeholder="[신한체크] 01/25 14:20 12,500원 스타벅스"></textarea>
+      <div class="btn-group">
+        <button class="btn btn-outline" onclick="openManualModal()">✏️ 직접 입력</button>
+        <button class="btn btn-primary" onclick="parseAndPreview()">✨ 자동 파싱 및 추가</button>
+      </div>
     </div>
+
+    <div class="list-controls">
+      <div class="nav-group">
+        <button class="nav-btn" id="prevBtn" onclick="changePeriod(-1)">◀</button>
+        <span class="current-period" id="periodDisplay">2026년 1월</span>
+        <button class="nav-btn" id="nextBtn" onclick="changePeriod(1)">▶</button>
+      </div>
+      <div id="filterGroup">
+        <label style="font-size: 13px;"><input type="checkbox" id="gcHide" onchange="render()"> 상품권 제외</label>
+      </div>
+    </div>
+
+    <div id="listArea"></div>
   </main>
 
-  <button class="fab" onclick="openModal()">+</button>
-
-  <div class="modal-overlay" id="modalOverlay" onclick="closeModal()">
-    <div class="modal" onclick="event.stopPropagation()">
-      <div class="modal-header">
-        <h2>새 지출 기록</h2>
-        <button class="close-btn" onclick="closeModal()">✕</button>
+  <div class="modal-overlay" id="previewModal">
+    <div class="modal">
+      <h3 style="margin-bottom:15px">파싱 결과 미리보기</h3>
+      <div style="overflow-x: auto;">
+        <table class="preview-table">
+          <thead><tr><th>날짜</th><th>가맹점</th><th>금액</th><th>카드</th></tr></thead>
+          <tbody id="previewBody"></tbody>
+        </table>
       </div>
-      <div class="form-group">
-        <label>날짜</label>
-        <input type="date" id="inputDate">
-        
-        <label>카드사</label>
-        <div class="selector-grid" id="cardSelector">
-          <button class="select-item active" onclick="selectCard(this, '우리')">우리</button>
-          <button class="select-item" onclick="selectCard(this, '삼성')">삼성</button>
-          <button class="select-item" onclick="selectCard(this, '현대')">현대</button>
-          <button class="select-item" onclick="selectCard(this, '신한')">신한</button>
-        </div>
-
-        <label>카테고리</label>
-        <div class="selector-grid" id="categorySelector">
-          <button class="select-item active" onclick="selectCategory(this, 'food')">🍴 식비</button>
-          <button class="select-item" onclick="selectCategory(this, 'shopping')">🛍️ 쇼핑</button>
-          <button class="select-item" onclick="selectCategory(this, 'giftcard')">🎫 상품권</button>
-          <button class="select-item" onclick="selectCategory(this, 'transport')">🚌 교통</button>
-        </div>
-
-        <label>내용 및 금액</label>
-        <input type="text" id="inputStore" placeholder="가맹점 이름" style="margin-bottom:8px">
-        <input type="number" id="inputAmount" placeholder="금액 (원)">
-
-        <div class="split-box">
-          <label><input type="checkbox" id="isSplit"> 1/N 정산 (나 50% 부담)</label>
-        </div>
-        
-        <button class="submit-btn" onclick="submitTransaction()">저장하기</button>
+      <div class="btn-group" style="margin-top:20px">
+        <button class="btn btn-outline" onclick="closeModal('previewModal')">취소</button>
+        <button class="btn btn-primary" onclick="confirmQuickInput()">모두 저장하기</button>
       </div>
     </div>
   </div>
 
-  <div class="modal-overlay" id="mileModal" onclick="closeMileModal()">
-    <div class="modal" onclick="event.stopPropagation()">
-      <div class="modal-header"><h2>✈️ 상테크 계산기</h2></div>
-      <div class="form-group">
-        <input type="number" id="mileBuy" placeholder="구매가 (예: 46300)">
-        <input type="number" id="mileSell" placeholder="현금화 (예: 46000)">
-        <input type="number" id="milePoint" placeholder="적립 마일 (예: 15)">
-        <div class="calc-result" id="mileResult">단가를 계산해보세요.</div>
-        <button class="submit-btn" onclick="calcMile()">계산하기</button>
-      </div>
-    </div>
-  </div>
+  <button class="fab" onclick="openManualModal()">+</button>
 
-  <script src="script.js"></script>
+  <script>
+    /* ==========================================
+       1. 초기 상태 및 환경 설정
+    ========================================== */
+    const START_YEAR = 2026;
+    const START_MONTH = 1;
+    
+    // 사용자별 데이터 분리를 위해 로컬스토리지 키에 고유 ID 활용 (없으면 생성)
+    if(!localStorage.getItem('sl_user_id')) localStorage.setItem('sl_user_id', 'user_' + Math.random().toString(36).substr(2, 9));
+    const USER_KEY = `sl_data_${localStorage.getItem('sl_user_id')}`;
+
+    let state = {
+      view: 'monthly', // 'monthly' | 'yearly'
+      year: 2026,
+      month: 1,
+      data: JSON.parse(localStorage.getItem(USER_KEY)) || { transactions: [], mileData: {} },
+      tempQuick: []
+    };
+
+    /* ==========================================
+       2. 핵심 기능: 데이터 저장 및 렌더링
+    ========================================== */
+    function saveData() {
+      localStorage.setItem(USER_KEY, JSON.stringify(state.data));
+    }
+
+    function setView(v) {
+      state.view = v;
+      document.getElementById('btn-monthly').classList.toggle('active', v === 'monthly');
+      document.getElementById('btn-yearly').classList.toggle('active', v === 'yearly');
+      render();
+    }
+
+    function changePeriod(dir) {
+      if (state.view === 'monthly') {
+        state.month += dir;
+        if (state.month > 12) { state.month = 1; state.year++; }
+        if (state.month < 1) { state.month = 12; state.year--; }
+      } else {
+        state.year += dir;
+      }
+      
+      // 2026년 1월 이전 제한
+      if (state.year < START_YEAR) state.year = START_YEAR;
+      if (state.year === START_YEAR && state.month < START_MONTH) state.month = START_MONTH;
+      
+      render();
+    }
+
+    function render() {
+      // 1. 기간 표시 업데이트
+      const periodDisp = document.getElementById('periodDisplay');
+      periodDisp.textContent = state.view === 'monthly' ? `${state.year}년 ${state.month}월` : `${state.year}년`;
+      
+      // 2. 버튼 활성화 제어
+      const isStart = (state.year === START_YEAR && (state.view === 'yearly' || state.month === START_MONTH));
+      document.getElementById('prevBtn').disabled = isStart;
+
+      // 3. 데이터 필터링 및 통계 계산
+      const hideGC = document.getElementById('gcHide').checked;
+      let filtered = state.data.transactions.filter(t => {
+        const d = new Date(t.fullDate);
+        const yMatch = d.getFullYear() === state.year;
+        const mMatch = state.view === 'monthly' ? (d.getMonth() + 1) === state.month : true;
+        const gcMatch = hideGC ? t.category !== 'giftcard' : true;
+        return yMatch && mMatch && gcMatch;
+      });
+
+      // 정렬 (최신순)
+      filtered.sort((a, b) => new Date(b.fullDate) - new Date(a.fullDate));
+
+      let total = 0, myTotal = 0;
+      filtered.forEach(t => {
+        total += t.amount;
+        myTotal += (t.split && t.split.enabled) ? t.split.me : t.amount;
+      });
+
+      // 통계 UI 업데이트
+      document.getElementById('stat-total').textContent = total.toLocaleString() + '원';
+      document.getElementById('stat-my').textContent = Math.floor(myTotal).toLocaleString() + '원';
+      
+      // 4. 리스트 생성
+      const listArea = document.getElementById('listArea');
+      if (filtered.length === 0) {
+        listArea.innerHTML = `<div style="text-align:center; padding:40px; color:#9CA3AF;">내역이 없습니다.</div>`;
+      } else {
+        listArea.innerHTML = filtered.map(t => `
+          <div class="card" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-size:12px; color:#9CA3AF;">${t.fullDate.substring(5)} | ${t.card}</div>
+              <div style="font-weight:600;">${t.store}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-weight:700;">${t.amount.toLocaleString()}원</div>
+              <div style="font-size:11px; color:var(--primary)">${t.category === 'giftcard' ? '🎫 상품권' : '🛒 일반'}</div>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    /* ==========================================
+       3. 지능형 파싱 (SMS/카톡 자동인식)
+    ========================================== */
+    function parseAndPreview() {
+      const text = document.getElementById('rawInput').value.trim();
+      if(!text) return alert("내용을 입력해주세요.");
+
+      const lines = text.split('\n');
+      state.tempQuick = [];
+
+      lines.forEach(line => {
+        // [금액 추출] 숫자와 콤마 조합
+        const amountMatch = line.replace(/,/g, '').match(/\d{3,9}/);
+        const amount = amountMatch ? parseInt(amountMatch[0]) : 0;
+
+        // [날짜 추출] MM/DD 또는 MM-DD
+        const dateMatch = line.match(/(\d{1,2})[\/\-.](\d{1,2})/);
+        let dateStr = `${state.year}-${String(state.month).padStart(2,'0')}-01`;
+        if(dateMatch) {
+          dateStr = `${state.year}-${String(dateMatch[1]).padStart(2,'0')}-${String(dateMatch[2]).padStart(2,'0')}`;
+        }
+
+        // [카드사 추출]
+        const cards = ['신한', '우리', '삼성', '현대', '국민', '농협', '롯데', '카카오'];
+        const card = cards.find(c => line.includes(c)) || '기타';
+
+        // [가맹점] 금액 뒤에 오는 문자열 혹은 마지막 단어
+        let store = "알 수 없음";
+        const parts = line.split(/\s+/);
+        if(parts.length > 2) store = parts[parts.length - 1];
+
+        if(amount > 0) {
+          state.tempQuick.push({
+            id: Date.now() + Math.random(),
+            fullDate: dateStr,
+            store: store,
+            amount: amount,
+            card: card,
+            category: line.includes('상품권') ? 'giftcard' : 'etc',
+            split: { enabled: false }
+          });
+        }
+      });
+
+      if(state.tempQuick.length === 0) return alert("인식 가능한 내역이 없습니다.");
+
+      // 미리보기 모달 띄우기
+      const tbody = document.getElementById('previewBody');
+      tbody.innerHTML = state.tempQuick.map(t => `
+        <tr>
+          <td>${t.fullDate.substring(5)}</td>
+          <td>${t.store}</td>
+          <td>${t.amount.toLocaleString()}원</td>
+          <td>${t.card}</td>
+        </tr>
+      `).join('');
+      
+      document.getElementById('previewModal').classList.add('active');
+    }
+
+    function confirmQuickInput() {
+      state.data.transactions.push(...state.tempQuick);
+      saveData();
+      state.tempQuick = [];
+      document.getElementById('rawInput').value = '';
+      closeModal('previewModal');
+      render();
+    }
+
+    /* ==========================================
+       4. 유틸리티 및 기타
+    ========================================== */
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+    function openManualModal() { alert("직접 입력 기능은 '빠른 입력'의 파싱 성능 고도화 이후 통합 예정입니다. 현재는 문자를 복사해 넣는 방식을 추천드립니다!"); }
+
+    // 초기 실행
+    render();
+  </script>
 </body>
 </html>
