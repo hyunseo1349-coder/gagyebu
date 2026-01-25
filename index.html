@@ -3,108 +3,104 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>Smart Ledger 2026 Pro</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <title>Smart Ledger Pro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
-    :root { --primary: #6366F1; --bg: #F9FAFB; --danger: #EF4444; --success: #10B981; --accent: #F59E0B; }
-    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: #1F2937; padding-bottom: 40px; }
+    :root { --primary: #6366F1; --bg: #F9FAFB; --danger: #EF4444; --success: #10B981; --gift: #F59E0B; }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Noto Sans KR', sans-serif !important; -webkit-tap-highlight-color: transparent; }
+    body { background: var(--bg); color: #1F2937; padding-bottom: 50px; }
     
     .header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: white; border-bottom: 1px solid #E5E7EB; position: sticky; top: 0; z-index: 100; }
-    .view-toggle { display: flex; background: #F3F4F6; padding: 4px; border-radius: 12px; }
-    .view-toggle button { padding: 6px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; background: transparent; }
-    .view-toggle button.active { background: white; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .logo { font-weight: 900; color: var(--primary); font-size: 1.2rem; }
 
     .main { max-width: 800px; margin: 0 auto; padding: 16px; }
 
-    /* 대시보드 */
-    .dashboard-grid { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 24px; }
-    @media (min-width: 768px) { .dashboard-grid { grid-template-columns: 1.5fr 1fr; } }
-    .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .card { background: white; padding: 16px; border-radius: 20px; border: 1px solid #E5E7EB; }
-    .card-label { font-size: 11px; color: #6B7280; display: block; margin-bottom: 4px; }
-    .card-value { font-size: 16px; font-weight: 800; }
-    .chart-card { background: white; padding: 20px; border-radius: 20px; border: 1px solid #E5E7EB; display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+    /* 요약 카드 */
+    .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px; }
+    .card { background: white; padding: 20px; border-radius: 20px; border: 1px solid #E5E7EB; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+    .card-label { font-size: 12px; color: #6B7280; margin-bottom: 6px; display: block; }
+    .card-value { font-size: 18px; font-weight: 800; display: block; }
 
-    /* 입력 섹션 탭 */
-    .input-box { background: white; border-radius: 20px; padding: 20px; border: 1px solid #E5E7EB; margin-bottom: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-    .tabs { display: flex; gap: 15px; margin-bottom: 20px; border-bottom: 1px solid #F3F4F6; }
-    .tab { padding-bottom: 8px; cursor: pointer; font-size: 14px; font-weight: 700; color: #9CA3AF; transition: 0.2s; }
+    /* 차트 섹션 */
+    .chart-container { background: white; padding: 20px; border-radius: 24px; border: 1px solid #E5E7EB; margin-bottom: 24px; display: flex; flex-direction: column; align-items: center; }
+
+    /* 입력 탭 */
+    .input-box { background: white; border-radius: 24px; padding: 24px; border: 1px solid #E5E7EB; margin-bottom: 24px; }
+    .tabs { display: flex; gap: 20px; margin-bottom: 20px; border-bottom: 2px solid #F3F4F6; }
+    .tab { padding-bottom: 10px; cursor: pointer; font-size: 15px; font-weight: 700; color: #9CA3AF; }
     .tab.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
 
-    /* 수동 입력 폼 */
-    .manual-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .manual-form input, .manual-form select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #E5E7EB; background: #F9FAFB; font-size: 14px; outline: none; }
-    .full-width { grid-column: span 2; }
+    textarea { width: 100%; height: 100px; padding: 15px; border-radius: 16px; border: 1px solid #E5E7EB; background: #F9FAFB; font-size: 14px; margin-bottom: 12px; resize: none; outline: none; }
+    .manual-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .manual-form input, .manual-form select { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #E5E7EB; font-size: 14px; background: #F9FAFB; }
+    .full { grid-column: span 2; }
 
-    textarea { width: 100%; height: 80px; padding: 12px; border-radius: 12px; border: 1px solid #E5E7EB; background: #F9FAFB; font-size: 14px; margin-bottom: 12px; resize: none; }
-    .btn { padding: 12px; border-radius: 12px; border: none; cursor: pointer; font-weight: 700; transition: 0.2s; font-size: 14px; }
+    .btn { padding: 14px; border-radius: 14px; border: none; cursor: pointer; font-weight: 800; font-size: 15px; transition: 0.2s; }
     .btn-primary { background: var(--primary); color: white; width: 100%; }
-    .btn-outline { background: white; border: 1px solid #E5E7EB; color: #6B7280; margin-top: 8px; }
+    .btn-danger { background: #fee2e2; color: var(--danger); }
+    .btn-reset { background: #F3F4F6; color: #4B5563; padding: 8px 16px; font-size: 12px; border-radius: 10px; margin-bottom: 15px; border:none; cursor: pointer; font-weight: 700;}
 
-    /* 리스트 및 태그 */
-    .item { background: white; padding: 16px; border-radius: 16px; margin-bottom: 10px; border: 1px solid #F3F4F6; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
-    .tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-right: 4px; }
+    /* 리스트 스타일 */
+    .list-item { background: white; padding: 18px; border-radius: 18px; margin-bottom: 12px; border: 1px solid #F3F4F6; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: transform 0.1s; }
+    .list-item:active { transform: scale(0.98); }
+    .tag { font-size: 10px; padding: 3px 8px; border-radius: 6px; font-weight: 800; margin-right: 6px; text-transform: uppercase; }
     .tag-food { background: #FFEDD5; color: #EA580C; }
+    .tag-shopping { background: #DCFCE7; color: #16A34A; }
+    .tag-giftcard { background: #FEF3C7; color: #D97706; }
+    .tag-transport { background: #DBEAFE; color: #2563EB; }
     .tag-etc { background: #F3F4F6; color: #4B5563; }
-    .card-badge { font-size: 10px; background: #EEF2FF; color: #4338CA; padding: 2px 6px; border-radius: 4px; margin-top: 4px; display: inline-block; }
-    
-    .filter-badge { display: inline-flex; align-items: center; background: var(--primary); color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; margin-bottom: 12px; cursor: pointer; }
+    .item-info { font-size: 11px; color: #9CA3AF; margin-top: 4px; }
 
+    /* 필터 뱃지 */
+    #filterStatus { display: none; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+
+    /* 모달 */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: flex-end; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
     .modal-overlay.active { display: flex; }
-    .modal { background: white; border-radius: 24px 24px 0 0; width: 100%; max-width: 500px; padding: 24px; padding-bottom: env(safe-area-inset-bottom); animation: slideUp 0.3s ease; }
+    .modal { background: white; border-radius: 24px 24px 0 0; width: 100%; max-width: 500px; padding: 24px; padding-bottom: 40px; animation: slideUp 0.3s ease; }
     @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
   </style>
 </head>
 <body>
 
   <header class="header">
-    <div style="font-weight:900; color:var(--primary);">Smart Ledger</div>
-    <div class="view-toggle">
-      <button id="btn-monthly" class="active" onclick="setView('monthly')">월별</button>
-      <button id="btn-yearly" onclick="setView('yearly')">연간</button>
-    </div>
+    <div class="logo">Smart Ledger Pro</div>
+    <div style="font-size: 13px; font-weight: 700; background: #EEF2FF; color: var(--primary); padding: 5px 12px; border-radius: 10px;">2026 Edition</div>
   </header>
 
   <main class="main">
-    <div style="display:flex; justify-content:center; align-items:center; gap:20px; margin-bottom:20px;">
-      <button class="btn" style="background:none" onclick="changePeriod(-1)">◀</button>
-      <span id="periodDisplay" style="font-weight:800; font-size:18px;">2026년 1월</span>
-      <button class="btn" style="background:none" onclick="changePeriod(1)">▶</button>
+    <div class="dashboard">
+      <div class="card"><span class="card-label">전체 총 지출</span><span class="card-value" id="total-amt">0원</span></div>
+      <div class="card" style="border-left: 4px solid var(--success);"><span class="card-label">내 실제 지출 (상테크 제외)</span><span class="card-value" id="real-amt">0원</span></div>
+      <div class="card" style="border-left: 4px solid var(--gift);"><span class="card-label">상품권 (상테크)</span><span class="card-value" id="gift-amt">0원</span></div>
     </div>
 
-    <div class="dashboard-grid">
-      <div class="summary-grid">
-        <div class="card" style="grid-column: span 2;"><span class="card-label">총 지출</span><span class="card-value" id="stat-total" style="font-size:22px; color:var(--primary)">0원</span></div>
-        <div class="card"><span class="card-label">내 몫</span><span class="card-value" id="stat-my">0원</span></div>
-        <div class="card"><span class="card-label">가족분</span><span class="card-value" id="stat-family">0원</span></div>
-      </div>
-      <div class="chart-card">
-        <canvas id="categoryChart" width="160" height="160"></canvas>
-      </div>
+    <div class="chart-container">
+      <canvas id="mainChart" width="200" height="200"></canvas>
+      <p style="font-size: 11px; color: #9CA3AF; margin-top: 15px;">차트 조각 클릭 시 해당 내역만 필터링됩니다.</p>
+    </div>
+
+    <div id="filterStatus">
+      <span id="filterName" style="font-weight: 800; color: var(--primary); font-size: 14px;"></span>
+      <button class="btn btn-reset" onclick="clearFilter()">✕ 전체 보기 (필터 해제)</button>
     </div>
 
     <div class="input-box">
       <div class="tabs">
-        <div class="tab active" id="tab-auto" onclick="switchInput('auto')">스마트 자동</div>
-        <div class="tab" id="tab-manual" onclick="switchInput('manual')">직접 수동</div>
-      </div>
-      
-      <div id="area-auto">
-        <textarea id="rawInput" placeholder="카드 내역 복사..."></textarea>
-        <button class="btn btn-primary" onclick="parseText()">✨ 내역 자동 추가</button>
+        <div class="tab active" id="tab-auto" onclick="setTab('auto')">자동 입력</div>
+        <div class="tab" id="tab-manual" onclick="setTab('manual')">수동 입력</div>
       </div>
 
-      <div id="area-manual" style="display:none;">
+      <div id="view-auto">
+        <textarea id="autoInput" placeholder="카드 결제 내역을 붙여넣거나 업로드하세요..."></textarea>
+        <button class="btn btn-primary" onclick="processAuto()">✨ 자동 파싱 및 추가</button>
+      </div>
+
+      <div id="view-manual" style="display:none;">
         <div class="manual-form">
-          <input type="text" id="mStore" placeholder="지출처" class="full-width">
-          <input type="number" id="mAmt" placeholder="금액">
+          <input type="text" id="mStore" placeholder="가맹점 명칭" class="full">
+          <input type="number" id="mAmt" placeholder="결제 금액">
           <input type="date" id="mDate" value="2026-01-25">
           <select id="mCard">
             <option value="현대카드">현대카드</option>
@@ -112,188 +108,7 @@
             <option value="아멕스 그린">아멕스 그린</option>
             <option value="현금">현금/이체</option>
           </select>
-          <select id="mCat" class="full-width">
+          <select id="mCat">
             <option value="food">식비</option>
-            <option value="transport">교통</option>
             <option value="shopping">쇼핑</option>
-            <option value="medical">의료</option>
-            <option value="etc">기타</option>
-          </select>
-          <button class="btn btn-primary full-width" onclick="addManual()">저장하기</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="filterInfo"></div>
-    <div id="listArea"></div>
-  </main>
-
-  <div class="modal-overlay" id="editModal">
-    <div class="modal">
-      <h3 style="margin-bottom:15px;">내역 상세 수정</h3>
-      <div style="margin-bottom:20px;">
-        <label class="card-label">결제 수단 (인식 오류 시 수정)</label>
-        <select id="editCard" style="width:100%; padding:12px; border-radius:10px; border:1px solid #DDD;">
-          <option value="현대카드">현대카드</option>
-          <option value="대한항공카드 150">대한항공카드 150</option>
-          <option value="아멕스 그린">아멕스 그린</option>
-          <option value="현금">현금/이체</option>
-          <option value="기타">기타</option>
-        </select>
-      </div>
-      <div id="splitSection">
-        <label class="card-label">인원별 정산</label>
-        <div id="splitList"></div>
-      </div>
-      <div style="display:flex; gap:10px; margin-top:30px;">
-        <button class="btn btn-outline" style="flex:1" onclick="closeModal()">취소</button>
-        <button class="btn btn-primary" style="flex:2" onclick="saveEdit()">수정 완료</button>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    const STORAGE_KEY = 'sl_v8_final_hybrid';
-    const CAT_LABELS = { food: '식비', transport: '교통', shopping: '쇼핑', medical: '의료', etc: '기타', giftcard: '상품권' };
-    const MEMBERS = { me: '나', mom: '엄마', dad: '아빠', bro: '동생' };
-
-    let state = {
-      view: 'monthly', year: 2026, month: 1,
-      data: JSON.parse(localStorage.getItem(STORAGE_KEY)) || { list: [] },
-      filter: null, curId: null, chart: null
-    };
-
-    function switchInput(t) {
-      document.getElementById('area-auto').style.display = t === 'auto' ? 'block' : 'none';
-      document.getElementById('area-manual').style.display = t === 'manual' ? 'block' : 'none';
-      document.getElementById('tab-auto').classList.toggle('active', t === 'auto');
-      document.getElementById('tab-manual').classList.toggle('active', t === 'manual');
-    }
-
-    function addManual() {
-      const store = document.getElementById('mStore').value;
-      const amt = parseInt(document.getElementById('mAmt').value);
-      if(!store || !amt) return alert("내역을 입력하세요.");
-      
-      state.data.list.push({
-        id: Date.now(),
-        date: document.getElementById('mDate').value,
-        store, amt, 
-        card: document.getElementById('mCard').value,
-        cat: document.getElementById('mCat').value,
-        split: { me: amt, mom:0, dad:0, bro:0 }
-      });
-      saveAndRender();
-    }
-
-    function parseText() {
-      const raw = document.getElementById('rawInput').value.trim();
-      const lines = raw.split('\n').map(l => l.trim()).filter(l => l !== "");
-      lines.forEach((line, i) => {
-        if (line.endsWith('원') && /^[0-9,]+원$/.test(line)) {
-          const amt = parseInt(line.replace(/[^0-9]/g, ''));
-          let store = "지출처 미상", card = "현대카드", date = "2026-01-25";
-          
-          for(let j=i-1; j>i-10 && j>=0; j--){
-            const l = lines[j];
-            if(l.includes('카드') || l.includes('Express')) card = l;
-            if(!l.includes(':') && !l.includes('원') && !l.includes('카드') && store === "지출처 미상") store = l;
-          }
-          state.data.list.push({ id: Date.now()+Math.random(), date, store, amt, card, cat: autoCat(store), split: { me: amt, mom:0, dad:0, bro:0 } });
-        }
-      });
-      saveAndRender();
-      document.getElementById('rawInput').value = "";
-    }
-
-    function autoCat(s) {
-      if (/식당|카페|배민|소호정|완뚝/.test(s)) return 'food';
-      if (/택시|우버|지하철/.test(s)) return 'transport';
-      return 'etc';
-    }
-
-    function openEdit(id) {
-      state.curId = id;
-      const t = state.data.list.find(x => x.id === id);
-      document.getElementById('editCard').value = t.card.includes('대한항공') ? '대한항공카드 150' : (t.card.includes('Express') ? '아멕스 그린' : (t.card.includes('현금') ? '현금' : '현대카드'));
-      
-      document.getElementById('splitList').innerHTML = Object.entries(MEMBERS).map(([k,v]) => `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
-          <span>${v}</span>
-          <input type="number" id="es-${k}" value="${t.split[k]}" style="width:100px; padding:8px; border:1px solid #DDD; border-radius:8px; text-align:right;">
-        </div>
-      `).join('');
-      document.getElementById('editModal').classList.add('active');
-    }
-
-    function saveEdit() {
-      const t = state.data.list.find(x => x.id === state.curId);
-      t.card = document.getElementById('editCard').value;
-      Object.keys(MEMBERS).forEach(k => t.split[k] = parseInt(document.getElementById(`es-${k}`).value)||0);
-      saveAndRender();
-      closeModal();
-    }
-
-    function closeModal() { document.getElementById('editModal').classList.remove('active'); }
-    function saveAndRender() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data)); render(); }
-
-    function render() {
-      document.getElementById('periodDisplay').textContent = `${state.year}년 ${state.month}월`;
-      const periodData = state.data.list.filter(t => {
-        const d = new Date(t.date);
-        return d.getFullYear() === state.year && (d.getMonth()+1) === state.month;
-      });
-
-      let totals = { total:0, my:0, family:0 }, cats = {};
-      periodData.forEach(t => {
-        totals.total += t.amt; totals.my += t.split.me; totals.family += (t.amt - t.split.me);
-        if(t.cat !== 'giftcard') cats[t.cat] = (cats[t.cat] || 0) + t.amt;
-      });
-
-      document.getElementById('stat-total').textContent = totals.total.toLocaleString() + '원';
-      document.getElementById('stat-my').textContent = totals.my.toLocaleString() + '원';
-      document.getElementById('stat-family').textContent = totals.family.toLocaleString() + '원';
-
-      updateChart(cats, totals.total);
-      
-      const filtered = state.filter ? periodData.filter(t => t.cat === state.filter) : periodData;
-      document.getElementById('listArea').innerHTML = filtered.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(t => `
-        <div class="item" onclick="openEdit(${t.id})">
-          <div>
-            <span class="tag tag-${t.cat}">${CAT_LABELS[t.cat]}</span>
-            <strong>${t.store}</strong><br>
-            <span class="card-badge">${t.card}</span>
-          </div>
-          <div style="text-align:right">
-            <strong>${t.amt.toLocaleString()}원</strong>
-            ${t.split.me !== t.amt ? `<div style="font-size:10px; color:var(--primary)">내 몫: ${t.split.me.toLocaleString()}원</div>` : ''}
-          </div>
-        </div>
-      `).join('') || '<p style="text-align:center;padding:40px;color:#9CA3AF">내역이 없습니다.</p>';
-    }
-
-    function updateChart(data, total) {
-      const ctx = document.getElementById('categoryChart').getContext('2d');
-      if (state.chart) state.chart.destroy();
-      const keys = Object.keys(data);
-      state.chart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: keys.map(k=>CAT_LABELS[k]),
-          datasets: [{ data: Object.values(data), backgroundColor: ['#6366F1','#10B981','#F59E0B','#EF4444','#8B5CF6'], borderWidth:0 }]
-        },
-        options: {
-          cutout: '70%',
-          plugins: { legend: { display: false } },
-          onClick: (e, el) => { if(el.length) { state.filter = keys[el[0].index]; render(); } }
-        }
-      });
-    }
-
-    function changePeriod(v) { state.month += v; if(state.month>12){state.month=1;state.year++;} if(state.month<1){state.month=12;state.year--;} render(); }
-    function setView(v) { state.view = v; render(); }
-
-    render();
-  </script>
-</body>
-</html>
+            <option value="
