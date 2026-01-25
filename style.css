@@ -2,7 +2,6 @@
   --bg: #f5f6f8;
   --card: #ffffff;
   --text: #111;
-  --muted: #666;
 
   --food: #ff7675;
   --transport: #74b9ff;
@@ -14,12 +13,11 @@
   --bg: #121212;
   --card: #1e1e1e;
   --text: #f1f1f1;
-  --muted: #aaa;
 }
 
 * {
   box-sizing: border-box;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: system-ui, sans-serif;
 }
 
 body {
@@ -33,14 +31,13 @@ header {
   padding: 12px;
   position: sticky;
   top: 0;
-  z-index: 10;
 }
 
 header .row {
   display: flex;
   justify-content: center;
-  align-items: center;
   gap: 8px;
+  margin-bottom: 6px;
 }
 
 button {
@@ -48,7 +45,6 @@ button {
   border-radius: 6px;
   border: 1px solid #ccc;
   background: var(--card);
-  cursor: pointer;
 }
 
 .container {
@@ -64,29 +60,21 @@ button {
   margin-bottom: 12px;
 }
 
-h4 {
-  margin: 0 0 8px;
-}
-
-input, select, textarea {
+input, select {
   width: 100%;
   padding: 8px;
   margin-bottom: 6px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
 }
 
 ul {
   list-style: none;
   padding: 0;
-  margin: 0;
 }
 
 .expense-item {
   display: flex;
   justify-content: space-between;
   padding: 6px 0;
-  border-bottom: 1px solid #eee;
 }
 
 .badge {
@@ -99,17 +87,3 @@ ul {
 .badge.transport { background: var(--transport); }
 .badge.shopping { background: var(--shopping); }
 .badge.etc { background: var(--etc); }
-
-.filter-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #eee;
-  padding: 6px;
-  border-radius: 6px;
-  margin-bottom: 8px;
-}
-
-.dark .filter-bar {
-  background: #2a2a2a;
-}
