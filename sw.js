@@ -1,5 +1,7 @@
 self.addEventListener('install', e => {
-  self.skipWaiting();
+  e.waitUntil(
+    caches.open('gagyebu-v1').then(cache =>
+      cache.addAll(['./','./index.html','./style.css'])
+    )
+  );
 });
-
-self.addEventListener('fetch', () => {});
