@@ -33,34 +33,47 @@
     .card-label { font-size: 12px; color: #6B7280; display: block; margin-bottom: 6px; }
     .card-value { font-size: 18px; font-weight: 800; color: #111827; }
     
-    .chart-card { background: white; padding: 24px; border-radius: 24px; border: 1px solid #E5E7EB; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    #categoryChart { max-width: 200px !important; max-height: 200px !important; }
+    .chart-card { background: white; padding: 24px; border-radius: 24px; border: 1px solid #E5E7EB; display: flex; flex-direction: column; align-items: center; }
+    .chart-container { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; }
+    #categoryChart { max-width: 180px !important; max-height: 180px !important; cursor: pointer; }
+    .chart-legend { width: 100%; margin-top: 15px; font-size: 12px; }
+    .legend-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #F3F4F6; cursor: pointer; }
+    .legend-item:hover { background: #F9FAFB; }
 
     /* 입력 섹션 */
     .quick-input-area { background: white; border-radius: 24px; padding: 24px; border: 1px solid #E5E7EB; margin-bottom: 30px; }
     textarea { width: 100%; height: 80px; padding: 15px; border-radius: 12px; border: 1px solid #E5E7EB; background: #F9FAFB; resize: none; font-family: inherit; margin-bottom: 12px; }
+    .input-btns { display: flex; gap: 10px; }
     .btn { padding: 12px 20px; border-radius: 12px; border: none; cursor: pointer; font-weight: 700; font-size: 14px; }
-    .btn-primary { background: var(--primary); color: white; width: 100%; }
+    .btn-primary { background: var(--primary); color: white; flex: 2; }
+    .btn-outline { background: white; border: 1px solid var(--primary); color: var(--primary); flex: 1; }
 
     /* 리스트 */
+    .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .filter-info { font-size: 13px; color: var(--primary); font-weight: 600; }
     .transaction-item { background: white; padding: 16px; border-radius: 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #F3F4F6; cursor: pointer; transition: 0.2s; }
     .transaction-item:hover { transform: translateX(5px); border-color: var(--primary); }
     .tag { font-size: 10px; padding: 2px 8px; border-radius: 6px; font-weight: 700; margin-right: 6px; }
     .tag-food { background: #FFEDD5; color: #EA580C; }
     .tag-transport { background: #DBEAFE; color: #2563EB; }
     .tag-medical { background: #FEE2E2; color: #DC2626; }
+    .tag-shopping { background: #FEF9C3; color: #854D0E; }
+    .tag-living { background: #E0E7FF; color: #4338CA; }
     .tag-etc { background: #F3F4F6; color: #4B5563; }
+    .tag-giftcard { background: #FCE7F3; color: #BE185D; }
 
     /* 모달 */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
     .modal-overlay.active { display: flex; }
     .modal { background: white; border-radius: 24px; width: 95%; max-width: 450px; padding: 28px; max-height: 90vh; overflow-y: auto; }
     
+    .input-group { margin-bottom: 15px; }
+    .input-group label { display: block; font-size: 12px; color: #6B7280; margin-bottom: 5px; }
+    .input-group input, .input-group select { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #E5E7EB; }
+    
     .split-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding: 8px; border-radius: 10px; background: #F9FAFB; }
     .split-input { width: 100px; padding: 6px; border: 1px solid #DDD; border-radius: 6px; text-align: right; }
     
-    select.cat-select { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #E5E7EB; margin-bottom: 20px; font-weight: 600; }
-
     @media (max-width: 800px) {
       .dashboard-grid { grid-template-columns: 1fr; }
       .summary-grid { grid-template-columns: 1fr 1fr; }
@@ -86,24 +99,68 @@
 
     <div class="dashboard-grid">
       <div class="summary-grid">
-        <div class="card"><span class="card-label">총 지출</span><span class="card-value" id="stat-total">0원</span></div>
-        <div class="card" style="border-left: 4px solid var(--success);"><span class="card-label">🛒 내 실제 지출 (상테크 제외)</span><span class="card-value" id="stat-my">0원</span></div>
-        <div class="card" style="border-left: 4px solid var(--primary);"><span class="card-label">👨‍👩‍👧 가족/타인 지분</span><span class="card-value" id="stat-family">0원</span></div>
-        <div class="card" style="border-left: 4px solid var(--accent);"><span class="card-label">🎫 상품권 (상테크)</span><span class="card-value" id="stat-gc">0원</span></div>
+        <div class="card"><span class="card-label">💰 총지출</span><span class="card-value" id="stat-total">0원</span></div>
+        <div class="card" style="border-left: 4px solid var(--success);"><span class="card-label">🛒 실제 지출</span><span class="card-value" id="stat-my">0원</span></div>
+        <div class="card" style="border-left: 4px solid var(--primary);"><span class="card-label">👨‍👩‍👧 가족 사용</span><span class="card-value" id="stat-family">0원</span></div>
+        <div class="card" style="border-left: 4px solid var(--accent);"><span class="card-label">🎫 상품권</span><span class="card-value" id="stat-gc">0원</span></div>
       </div>
       <div class="chart-card">
         <span class="card-label" style="margin-bottom:15px;">카테고리별 지출 비율</span>
-        <canvas id="categoryChart"></canvas>
+        <div class="chart-container">
+            <canvas id="categoryChart"></canvas>
+            <div id="chartLegend" class="chart-legend"></div>
+        </div>
       </div>
     </div>
 
     <div class="quick-input-area">
       <textarea id="rawInput" placeholder="카드 상세 내역을 붙여넣으세요..."></textarea>
-      <button class="btn btn-primary" onclick="parseAndPreview()">✨ 자동 파싱 및 정화 추가</button>
+      <div class="input-btns">
+          <button class="btn btn-primary" onclick="parseAndPreview()">✨ 자동 입력</button>
+          <button class="btn btn-outline" onclick="openManualInput()">➕ 수동 입력</button>
+      </div>
     </div>
 
+    <div class="list-header">
+        <h3 style="font-size: 16px;">지출 내역</h3>
+        <div id="filterStatus" class="filter-info"></div>
+    </div>
     <div id="listArea"></div>
   </main>
+
+  <div class="modal-overlay" id="manualModal">
+    <div class="modal">
+      <h3>수동 지출 입력</h3>
+      <div class="input-group" style="margin-top:20px;">
+        <label>날짜</label>
+        <input type="date" id="man-date">
+      </div>
+      <div class="input-group">
+        <label>사용처</label>
+        <input type="text" id="man-store" placeholder="예: 스타벅스">
+      </div>
+      <div class="input-group">
+        <label>금액</label>
+        <input type="number" id="man-amount" placeholder="0">
+      </div>
+      <div class="input-group">
+        <label>카테고리</label>
+        <select id="man-category">
+            <option value="food">식비</option>
+            <option value="transport">교통</option>
+            <option value="shopping">쇼핑</option>
+            <option value="living">생활</option>
+            <option value="medical">의료</option>
+            <option value="etc">기타</option>
+            <option value="giftcard">상품권</option>
+        </select>
+      </div>
+      <div style="display:flex; gap:10px; margin-top:24px">
+        <button class="btn" style="background:#F3F4F6; flex:1" onclick="closeModal('manualModal')">취소</button>
+        <button class="btn btn-primary" style="flex:2" onclick="saveManualInput()">추가하기</button>
+      </div>
+    </div>
+  </div>
 
   <div class="modal-overlay" id="splitModal">
     <div class="modal">
@@ -111,7 +168,7 @@
       <p id="splitTotalDisplay" style="font-size: 14px; color: #6B7280; margin-bottom: 20px;"></p>
       
       <label class="card-label">카테고리 변경</label>
-      <select id="editCategory" class="cat-select">
+      <select id="editCategory" class="cat-select" style="width:100%; padding:10px; border-radius:10px; border:1px solid #E5E7EB; margin-bottom:20px;">
         <option value="food">식비</option>
         <option value="transport">교통</option>
         <option value="shopping">쇼핑</option>
@@ -127,6 +184,7 @@
 
       <div style="display:flex; gap:10px; margin-top:24px">
         <button class="btn" style="background:#F3F4F6; flex:1" onclick="closeModal('splitModal')">닫기</button>
+        <button class="btn btn-danger" style="flex:1" onclick="deleteTransaction()">삭제</button>
         <button class="btn btn-primary" id="saveSplitBtn" style="flex:2" onclick="saveSettlement()">저장하기</button>
       </div>
     </div>
@@ -134,15 +192,16 @@
 
   <script>
     const START_YEAR = 2026;
-    const DATA_KEY = `sl_data_pro_v3`;
+    const DATA_KEY = `sl_data_pro_v3_enhanced`;
     const CAT_MAP = { food: '식비', transport: '교통', shopping: '쇼핑', living: '생활', medical: '의료', etc: '기타', giftcard: '상품권' };
-    const CAT_COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#6B7280', '#EC4899'];
+    const CAT_COLORS = { food: '#6366F1', transport: '#10B981', shopping: '#F59E0B', living: '#EF4444', medical: '#8B5CF6', etc: '#6B7280', giftcard: '#EC4899' };
 
     let state = {
       view: 'monthly', year: 2026, month: 1,
       data: JSON.parse(localStorage.getItem(DATA_KEY)) || { transactions: [] },
       currentId: null,
-      chart: null
+      chart: null,
+      filterCategory: null
     };
 
     function saveData() { localStorage.setItem(DATA_KEY, JSON.stringify(state.data)); }
@@ -160,11 +219,156 @@
         if (state.month > 12) { state.month = 1; state.year++; }
         if (state.month < 1) { state.month = 12; state.year--; }
       } else { state.year += dir; }
-      if (state.year < START_YEAR) { state.year = START_YEAR; state.month = 1; }
       render();
     }
 
-    // 파싱 시 카테고리 자동 분류 로직
+    function openManualInput() {
+        document.getElementById('man-date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('manualModal').classList.add('active');
+    }
+
+    function saveManualInput() {
+        const date = document.getElementById('man-date').value;
+        const store = document.getElementById('man-store').value || "수동 입력";
+        const amount = parseInt(document.getElementById('man-amount').value) || 0;
+        const category = document.getElementById('man-category').value;
+
+        if(amount <= 0) return alert("금액을 입력하세요.");
+
+        state.data.transactions.push({
+            id: Date.now(),
+            fullDate: date,
+            store: store,
+            amount: amount,
+            category: category,
+            cardName: "수동",
+            split: { me: amount, mom: 0, dad: 0, bro: 0, friend: 0 }
+        });
+        
+        saveData();
+        closeModal('manualModal');
+        render();
+    }
+
+    function deleteTransaction() {
+        if(confirm("정말 삭제하시겠습니까?")) {
+            state.data.transactions = state.data.transactions.filter(t => t.id !== state.currentId);
+            saveData();
+            closeModal('splitModal');
+            render();
+        }
+    }
+
+    function render() {
+      document.getElementById('periodDisplay').textContent = state.view === 'monthly' ? `${state.year}년 ${state.month}월` : `${state.year}년`;
+      
+      let periodFiltered = state.data.transactions.filter(t => {
+        const d = new Date(t.fullDate);
+        return d.getFullYear() === state.year && (state.view === 'yearly' || (d.getMonth()+1) === state.month);
+      });
+
+      let stats = { total: 0, myActual: 0, family: 0, gc: 0 };
+      let catSums = { food: 0, transport: 0, shopping: 0, living: 0, medical: 0, etc: 0, giftcard: 0 };
+
+      periodFiltered.forEach(t => {
+        stats.total += t.amount;
+        // 가족 사용분 (엄마, 아빠, 동생 합계)
+        const fSum = (t.split?.mom || 0) + (t.split?.dad || 0) + (t.split?.bro || 0);
+        stats.family += fSum;
+        
+        if (t.category === 'giftcard') {
+            stats.gc += t.amount;
+        }
+        
+        catSums[t.category] += t.amount;
+      });
+
+      // 실제 지출 공식 반영: (전체 사용액 + 정산해서 나만 사용한 금액 - 상품권 사용 금액)
+      // 위 공식은 결국 (나의 지분 - 상품권)과 논리적으로 유사하므로 요청하신 수식대로 구현:
+      const myShareTotal = periodFiltered.reduce((acc, cur) => acc + (cur.split?.me || 0), 0);
+      stats.myActual = stats.total + (myShareTotal - stats.total) - stats.gc;
+
+      document.getElementById('stat-total').textContent = stats.total.toLocaleString() + '원';
+      document.getElementById('stat-my').textContent = stats.myActual.toLocaleString() + '원';
+      document.getElementById('stat-family').textContent = stats.family.toLocaleString() + '원';
+      document.getElementById('stat-gc').textContent = stats.gc.toLocaleString() + '원';
+
+      updateChart(catSums);
+
+      // 리스트 렌더링 (카테고리 필터 적용)
+      let listData = state.filterCategory ? periodFiltered.filter(t => t.category === state.filterCategory) : periodFiltered;
+      
+      document.getElementById('filterStatus').textContent = state.filterCategory ? `공급필터: ${CAT_MAP[state.filterCategory]} (클릭 시 해제)` : "";
+      document.getElementById('filterStatus').onclick = () => { state.filterCategory = null; render(); };
+
+      const listArea = document.getElementById('listArea');
+      listArea.innerHTML = listData.sort((a,b) => new Date(b.fullDate)-new Date(a.fullDate)).map(t => `
+        <div class="transaction-item" onclick="openSettlement(${t.id})">
+          <div style="flex:1">
+            <div style="font-size:11px; color:#9CA3AF; margin-bottom:4px;">${t.fullDate} | ${t.cardName || '카드'}</div>
+            <span class="tag tag-${t.category}">${CAT_MAP[t.category]}</span>
+            <span style="font-weight:700;">${t.store}</span>
+          </div>
+          <div style="text-align:right">
+            <div style="font-weight:800;">${t.amount.toLocaleString()}원</div>
+            ${t.split && (t.amount !== t.split.me) ? `<div style="font-size:10px; color:var(--primary)">내 몫: ${t.split.me.toLocaleString()}</div>` : ''}
+          </div>
+        </div>
+      `).join('') || '<div style="text-align:center; padding:40px; color:#9CA3AF;">내역이 없습니다.</div>';
+    }
+
+    function updateChart(sums) {
+      const ctx = document.getElementById('categoryChart').getContext('2d');
+      const filteredSums = Object.entries(sums).filter(([k, v]) => v > 0);
+      const data = filteredSums.map(x => x[1]);
+      const labels = filteredSums.map(x => CAT_MAP[x[0]]);
+      const colors = filteredSums.map(x => CAT_COLORS[x[0]]);
+      const total = data.reduce((a, b) => a + b, 0);
+
+      if (state.chart) state.chart.destroy();
+      
+      state.chart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            backgroundColor: colors,
+            borderWidth: 0,
+            hoverOffset: 10
+          }]
+        },
+        options: {
+          plugins: { legend: { display: false } },
+          cutout: '70%',
+          onClick: (evt, elements) => {
+              if (elements.length > 0) {
+                  const idx = elements[0].index;
+                  const clickedKey = filteredSums[idx][0];
+                  state.filterCategory = clickedKey;
+                  render();
+              } else {
+                  state.filterCategory = null;
+                  render();
+              }
+          }
+        }
+      });
+
+      // 커스텀 범례 생성
+      const legendArea = document.getElementById('chartLegend');
+      legendArea.innerHTML = filteredSums.map(([key, val]) => {
+          const percent = ((val / total) * 100).toFixed(1);
+          return `
+            <div class="legend-item" onclick="state.filterCategory='${key}'; render();">
+                <span><span style="color:${CAT_COLORS[key]}">●</span> ${CAT_MAP[key]}</span>
+                <span><b>${val.toLocaleString()}원</b> (${percent}%)</span>
+            </div>
+          `;
+      }).join('');
+    }
+
+    // --- 기존 파싱 및 기타 함수들 (유지) ---
     function autoCategorize(store) {
       if (/상품권|페이타랩|쿠폰|기프티콘/.test(store)) return 'giftcard';
       if (/식당|소호정|카페|스타벅스|완뚝|배민|우아한|KFC|푸가|스시다이몬|국수|낙지|아웃백|감자탕|맥도날드/.test(store)) return 'food';
@@ -180,10 +384,8 @@
       state.currentId = id;
       document.getElementById('splitTotalDisplay').textContent = `${t.store} - ${t.amount.toLocaleString()}원`;
       document.getElementById('editCategory').value = t.category;
-
       const members = { me: '나', mom: '엄마', dad: '아빠', bro: '동생', friend: '친구' };
       if (!t.split) t.split = { me: t.amount, mom:0, dad:0, bro:0, friend:0 };
-
       document.getElementById('splitList').innerHTML = Object.entries(members).map(([key, name]) => `
         <div class="split-row">
           <span>${name}</span>
@@ -220,82 +422,12 @@
       render();
     }
 
-    function render() {
-      document.getElementById('periodDisplay').textContent = state.view === 'monthly' ? `${state.year}년 ${state.month}월` : `${state.year}년`;
-      
-      let filtered = state.data.transactions.filter(t => {
-        const d = new Date(t.fullDate);
-        return d.getFullYear() === state.year && (state.view === 'yearly' || (d.getMonth()+1) === state.month);
-      });
-
-      let stats = { total: 0, my: 0, family: 0, gc: 0 };
-      let catSums = { food: 0, transport: 0, shopping: 0, living: 0, medical: 0, etc: 0 };
-
-      filtered.forEach(t => {
-        stats.total += t.amount;
-        if (t.category === 'giftcard') stats.gc += t.amount;
-        else {
-          const myPart = t.split ? t.split.me : t.amount;
-          stats.my += myPart;
-          stats.family += (t.amount - myPart);
-          catSums[t.category] = (catSums[t.category] || 0) + t.amount;
-        }
-      });
-
-      document.getElementById('stat-total').textContent = stats.total.toLocaleString() + '원';
-      document.getElementById('stat-my').textContent = stats.my.toLocaleString() + '원';
-      document.getElementById('stat-family').textContent = stats.family.toLocaleString() + '원';
-      document.getElementById('stat-gc').textContent = stats.gc.toLocaleString() + '원';
-
-      updateChart(catSums);
-
-      const listArea = document.getElementById('listArea');
-      listArea.innerHTML = filtered.sort((a,b) => new Date(b.fullDate)-new Date(a.fullDate)).map(t => `
-        <div class="transaction-item" onclick="openSettlement(${t.id})">
-          <div>
-            <span class="tag tag-${t.category}">${CAT_MAP[t.category]}</span>
-            <span style="font-weight:700;">${t.store}</span>
-            <div style="font-size:11px; color:#9CA3AF; margin-top:4px;">${t.fullDate}</div>
-          </div>
-          <div style="text-align:right">
-            <div style="font-weight:800;">${t.amount.toLocaleString()}원</div>
-            ${t.split && (t.amount !== t.split.me) ? `<div style="font-size:10px; color:var(--primary)">내 몫: ${t.split.me.toLocaleString()}</div>` : ''}
-          </div>
-        </div>
-      `).join('') || '<div style="text-align:center; padding:40px; color:#9CA3AF;">내역이 없습니다.</div>';
-    }
-
-    function updateChart(sums) {
-      const ctx = document.getElementById('categoryChart').getContext('2d');
-      const data = Object.values(sums);
-      const labels = Object.keys(sums).map(k => CAT_MAP[k]);
-
-      if (state.chart) state.chart.destroy();
-      
-      state.chart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: labels,
-          datasets: [{
-            data: data,
-            backgroundColor: CAT_COLORS,
-            borderWidth: 0,
-            hoverOffset: 10
-          }]
-        },
-        options: {
-          plugins: { legend: { display: false } },
-          cutout: '70%'
-        }
-      });
-    }
-
     function parseAndPreview() {
       const text = document.getElementById('rawInput').value.trim();
       if (!text) return;
       const lines = text.split('\n').map(l => l.trim()).filter(l => l !== "");
       let rawItems = [];
-      const todayStr = "2026-01-25";
+      const todayStr = new Date().toISOString().split('T')[0];
 
       for (let i = 0; i < lines.length; i++) {
         if (lines[i].endsWith('원') && !lines[i].includes('신청하기')) {
@@ -306,7 +438,7 @@
              const dMatch = dateLine.match(/(\d{2})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
              if (dMatch) finalDate = `20${dMatch[1]}-${String(dMatch[2]).padStart(2, '0')}-${String(dMatch[3]).padStart(2, '0')}`;
           }
-          rawItems.push({ id: Date.now() + Math.random(), fullDate: finalDate, store, amount, status });
+          rawItems.push({ id: Date.now() + Math.random(), fullDate: finalDate, store, amount, status, cardName: "삼성카드" });
         }
       }
       
