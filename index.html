@@ -5,181 +5,156 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>가계부</title>
 
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#4f46e5" />
+
+  <!-- Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 
   <!-- CSS -->
   <link rel="stylesheet" href="style.css" />
 
-  <!-- PWA -->
-  <link rel="manifest" href="manifest.json" />
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
-<header>
-  <div class="row">
-    <button onclick="move('prev')">◀</button>
-    <strong id="period"></strong>
-    <button onclick="move('next')">▶</button>
-  </div>
-  <div class="row">
-    <button onclick="setView('monthly')">월별</button>
-    <button onclick="setView('yearly')">연간</button>
-  </div>
+<header class="top">
+  <button onclick="move(-1)">◀</button>
+  <strong id="period"></strong>
+  <button onclick="move(1)">▶</button>
 </header>
 
-<div class="container">
-
-  <div class="card">
-    <h4>설정</h4>
-    <label>
-      <input type="checkbox" id="darkToggle" /> 다크모드
-    </label>
-  </div>
-
-  <div class="card">
-    <h4>지출 입력</h4>
-    <input id="amount" type="number" placeholder="금액" />
-    <select id="category"></select>
-    <input id="memo" placeholder="메모" />
-    <button onclick="addExpense()">추가</button>
-  </div>
-
-  <div class="card">
-    <h4>통계</h4>
-    <canvas id="chart"></canvas>
-  </div>
-
-  <div class="card">
-    <h4>내역</h4>
-    <ul id="list"></ul>
-  </div>
-
+<div class="view-switch">
+  <button onclick="setView('month')">월별</button>
+  <button onclick="setView('year')">연간</button>
 </div>
 
+<main class="container">
+
+  <section class="card">
+    <h3>설정</h3>
+    <label class="toggle">
+      <input type="checkbox" id="darkToggle" />
+      <span>다크모드</span>
+    </label>
+  </section>
+
+  <section class="card">
+    <h3>지출 입력</h3>
+    <input id="amount" type="number" placeholder="금액" />
+    <select id="category">
+      <option value="식비">식비</option>
+      <option value="교통">교통</option>
+      <option value="쇼핑">쇼핑</option>
+      <option value="기타">기타</option>
+    </select>
+    <input id="memo" placeholder="메모" />
+    <button onclick="addExpense()">추가</button>
+  </section>
+
+  <section class="card">
+    <h3>통계</h3>
+    <canvas id="chart"></canvas>
+  </section>
+
+</main>
+
 <script>
-/* ===== STATE ===== */
-const state = {
-  view: 'monthly',
-  year: 2026,
-  month: 1,
-  dark: false,
-  categories: [
-    { key: 'food', label: '식비' },
-    { key: 'transport', label: '교통' },
-    { key: 'shopping', label: '쇼핑' },
-    { key: 'etc', label: '기타' }
-  ],
-  expenses: JSON.parse(localStorage.getItem('expenses') || '[]')
+/* ===== 상태 ===== */
+let year = 2026, month = 1, view = 'month';
+let expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
+
+/* ===== 다크모드 ===== */
+const darkToggle = document.getElementById('darkToggle');
+const savedDark = localStorage.getItem('dark') === 'true';
+document.documentElement.classList.toggle('dark', savedDark);
+darkToggle.checked = savedDark;
+
+darkToggle.onchange = () => {
+  document.documentElement.classList.toggle('dark', darkToggle.checked);
+  localStorage.setItem('dark', darkToggle.checked);
 };
 
-/* ===== ELEMENTS ===== */
-const periodEl = document.getElementById('period');
-const listEl = document.getElementById('list');
-const categoryEl = document.getElementById('category');
-const amountEl = document.getElementById('amount');
-const memoEl = document.getElementById('memo');
-const darkToggle = document.getElementById('darkToggle');
-
-let chart;
-
-/* ===== NAV ===== */
-function setView(v) {
-  state.view = v;
-  render();
+/* ===== 날짜 ===== */
+function renderPeriod() {
+  document.getElementById('period').textContent =
+    view === 'month' ? `${year}년 ${month}월` : `${year}년`;
 }
+renderPeriod();
 
-function move(dir) {
-  if (state.view === 'monthly') {
-    state.month += dir === 'prev' ? -1 : 1;
-    if (state.month === 0) { state.month = 12; state.year--; }
-    if (state.month === 13) { state.month = 1; state.year++; }
+function move(diff) {
+  if (view === 'month') {
+    month += diff;
+    if (month < 1) { month = 12; year--; }
+    if (month > 12) { month = 1; year++; }
   } else {
-    state.year += dir === 'prev' ? -1 : 1;
+    year += diff;
   }
-  render();
+  renderPeriod();
+  renderChart();
 }
 
-/* ===== ADD ===== */
+function setView(v) {
+  view = v;
+  renderPeriod();
+  renderChart();
+}
+
+/* ===== 지출 ===== */
 function addExpense() {
-  if (!amountEl.value) return;
-  state.expenses.push({
-    amount: Number(amountEl.value),
+  const amount = +amountEl.value;
+  if (!amount) return;
+
+  expenses.push({
+    amount,
     category: categoryEl.value,
-    memo: memoEl.value,
-    year: state.year,
-    month: state.month
+    year, month
   });
-  localStorage.setItem('expenses', JSON.stringify(state.expenses));
-  amountEl.value = '';
-  memoEl.value = '';
-  render();
+  localStorage.setItem('expenses', JSON.stringify(expenses));
+  amountEl.value = memoEl.value = '';
+  renderChart();
 }
 
-/* ===== RENDER ===== */
-function render() {
-  document.documentElement.classList.toggle('dark', state.dark);
+const amountEl = document.getElementById('amount');
+const categoryEl = document.getElementById('category');
+const memoEl = document.getElementById('memo');
 
-  periodEl.textContent =
-    state.view === 'monthly'
-      ? `${state.year}년 ${state.month}월`
-      : `${state.year}년`;
+/* ===== 차트 ===== */
+let chart;
+function renderChart() {
+  const sum = { 식비:0, 교통:0, 쇼핑:0, 기타:0 };
 
-  categoryEl.innerHTML = state.categories
-    .map(c => `<option value="${c.key}">${c.label}</option>`)
-    .join('');
-
-  const filtered = state.expenses.filter(e =>
-    state.view === 'monthly'
-      ? e.year === state.year && e.month === state.month
-      : e.year === state.year
-  );
-
-  listEl.innerHTML = '';
-  const sum = {};
-  state.categories.forEach(c => sum[c.key] = 0);
-
-  filtered.forEach(e => {
-    sum[e.category] += e.amount;
-    listEl.innerHTML += `
-      <li class="expense-item">
-        <span>${e.memo || ''}</span>
-        <span class="badge ${e.category}">
-          ${e.amount.toLocaleString()}원
-        </span>
-      </li>`;
-  });
+  expenses.filter(e =>
+    view === 'month'
+      ? e.year === year && e.month === month
+      : e.year === year
+  ).forEach(e => sum[e.category] += e.amount);
 
   if (chart) chart.destroy();
   chart = new Chart(document.getElementById('chart'), {
-    type: 'pie',
+    type: 'doughnut',
     data: {
-      labels: state.categories.map(c => c.label),
+      labels: Object.keys(sum),
       datasets: [{
-        data: state.categories.map(c => sum[c.key]),
-        backgroundColor: [
-          'var(--food)',
-          'var(--transport)',
-          'var(--shopping)',
-          'var(--etc)'
-        ]
+        data: Object.values(sum),
+        backgroundColor: ['#f97316','#3b82f6','#22c55e','#a855f7']
       }]
     },
-    options: { plugins: { legend: { position: 'bottom' } } }
+    options: {
+      cutout: '65%',
+      plugins: { legend: { position: 'bottom' } }
+    }
   });
 }
+renderChart();
 
-/* ===== DARK MODE ===== */
-darkToggle.addEventListener('change', e => {
-  state.dark = e.target.checked;
-  render();
-});
-
-render();
-
-/* ===== SW ===== */
+/* ===== PWA ===== */
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js');
+  navigator.serviceWorker.register('sw.js');
 }
 </script>
 
