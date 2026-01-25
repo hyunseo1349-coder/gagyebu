@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart Ledger Pro - 스마트 가계부</title>
+  <title>나만의 가계부</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
   <style>
     :root {
       --primary: #6366F1;
@@ -535,6 +536,73 @@
     }
     .split-summary-label { font-size: 13px; font-weight: 600; color: var(--success); }
     .split-summary-value { font-size: 16px; font-weight: 800; color: var(--success); }
+
+    /* 거래 수정/삭제 버튼 */
+    .tx-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px dashed var(--border);
+    }
+    .tx-action-btn {
+      flex: 1;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+    .tx-action-btn.edit {
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+    .tx-action-btn.edit:hover {
+      background: var(--primary);
+      color: white;
+    }
+    .tx-action-btn.delete {
+      background: var(--danger-light);
+      color: var(--danger);
+    }
+    .tx-action-btn.delete:hover {
+      background: var(--danger);
+      color: white;
+    }
+
+    /* 수정 모달 폼 */
+    .edit-form-group {
+      margin-bottom: 16px;
+    }
+    .edit-form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+    .edit-form-group input,
+    .edit-form-group select {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      font-size: 14px;
+      font-family: inherit;
+    }
+    .edit-form-group input:focus,
+    .edit-form-group select:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    .edit-form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
     
     .no-data {
       text-align: center;
@@ -767,8 +835,8 @@
 <body>
   <header class="header">
     <div class="logo">
-      <div class="logo-icon">S</div>
-      <span class="logo-text">Smart Ledger</span>
+      <div class="logo-icon">가</div>
+      <span class="logo-text">나만의 가계부</span>
     </div>
     <div class="header-badge">2026 Edition</div>
   </header>
@@ -1026,6 +1094,70 @@
     </div>
   </div>
 
+  <!-- 거래 수정 모달 -->
+  <div class="modal-overlay" id="editTxModal" onclick="closeEditModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">✏️ 거래 수정</div>
+        <button class="modal-close" onclick="closeEditModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editTxId">
+        <div class="edit-form-group">
+          <label>가맹점명</label>
+          <input type="text" id="editStore" placeholder="가맹점명">
+        </div>
+        <div class="edit-form-row">
+          <div class="edit-form-group">
+            <label>금액</label>
+            <input type="number" id="editAmount" placeholder="0">
+          </div>
+          <div class="edit-form-group">
+            <label>날짜 (MM/DD)</label>
+            <input type="text" id="editDate" placeholder="01/23">
+          </div>
+        </div>
+        <div class="edit-form-row">
+          <div class="edit-form-group">
+            <label>결제수단</label>
+            <select id="editCard">
+              <option>신한카드</option>
+              <option>삼성카드</option>
+              <option>현대카드</option>
+              <option>KB국민카드</option>
+              <option>롯데카드</option>
+              <option>우리카드</option>
+              <option>하나카드</option>
+              <option>NH농협카드</option>
+              <option>BC카드</option>
+              <option>네이버페이</option>
+              <option>카카오페이</option>
+              <option>토스</option>
+              <option>현금</option>
+            </select>
+          </div>
+          <div class="edit-form-group">
+            <label>카테고리</label>
+            <select id="editCategory">
+              <option value="food">🍽️ 식비</option>
+              <option value="shopping">🛒 쇼핑</option>
+              <option value="transport">🚗 교통</option>
+              <option value="leisure">🎬 여가</option>
+              <option value="medical">🏥 의료</option>
+              <option value="utility">💡 공과금</option>
+              <option value="education">📚 교육</option>
+              <option value="giftcard">🎁 상품권</option>
+              <option value="etc">📦 기타</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="saveEditTx()">저장하기</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 연간 마일 모달 -->
   <div class="modal-overlay" id="yearlyMileModal" onclick="closeYearlyMileModal()">
     <div class="modal" onclick="event.stopPropagation()">
@@ -1246,16 +1378,18 @@
     function renderCategoryChart(data) {
       const ctx = document.getElementById('categoryChart');
       if (state.charts.category) state.charts.category.destroy();
-      
+
       const cats = Object.keys(data).filter(k => data[k] > 0);
       if (cats.length === 0) {
         state.charts.category = new Chart(ctx, {
           type: 'doughnut',
           data: { labels: ['데이터 없음'], datasets: [{ data: [1], backgroundColor: ['#E5E7EB'] }] },
-          options: { cutout: '65%', plugins: { legend: { display: false } } }
+          options: { cutout: '65%', plugins: { legend: { display: false }, datalabels: { display: false } } }
         });
         return;
       }
+
+      const total = cats.reduce((sum, c) => sum + data[c], 0);
 
       state.charts.category = new Chart(ctx, {
         type: 'doughnut',
@@ -1266,9 +1400,50 @@
             backgroundColor: cats.map(c => CATEGORIES[c]?.color || '#6B7280')
           }]
         },
+        plugins: [ChartDataLabels],
         options: {
-          cutout: '65%',
-          plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 8, font: { size: 11 } } } },
+          cutout: '60%',
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                boxWidth: 12,
+                padding: 8,
+                font: { size: 11 },
+                generateLabels: function(chart) {
+                  const data = chart.data;
+                  return data.labels.map((label, i) => {
+                    const value = data.datasets[0].data[i];
+                    const percent = ((value / total) * 100).toFixed(1);
+                    return {
+                      text: `${label} ${fmtShort(value)}원 (${percent}%)`,
+                      fillStyle: data.datasets[0].backgroundColor[i],
+                      strokeStyle: data.datasets[0].backgroundColor[i],
+                      lineWidth: 0,
+                      index: i
+                    };
+                  });
+                }
+              }
+            },
+            datalabels: {
+              color: '#fff',
+              font: { weight: 'bold', size: 11 },
+              formatter: (value, context) => {
+                const percent = ((value / total) * 100).toFixed(0);
+                return percent >= 5 ? percent + '%' : '';
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const value = context.parsed;
+                  const percent = ((value / total) * 100).toFixed(1);
+                  return `${context.label}: ${fmt(value)}원 (${percent}%)`;
+                }
+              }
+            }
+          },
           onClick: (e, el) => {
             if (el.length) {
               state.filter = cats[el[0].index];
@@ -1357,6 +1532,10 @@
               <div class="split-summary">
                 <span class="split-summary-label">💰 내 실제 부담</span>
                 <span class="split-summary-value" id="mySum_${t.id}">${fmt(myShare)}원</span>
+              </div>
+              <div class="tx-actions">
+                <button class="tx-action-btn edit" onclick="openEditModal('${t.id}')">✏️ 수정</button>
+                <button class="tx-action-btn delete" onclick="deleteTx('${t.id}')">🗑️ 삭제</button>
               </div>
             </div>
           </div>`;
@@ -1525,53 +1704,218 @@
     }
 
     function parseLine(line) {
-      // 금액
+      const originalLine = line;
+
+      // ===== 금액 인식 (다양한 형식 지원) =====
       let amt = 0;
-      const amtMatch = line.match(/([0-9,]+)\s*원/);
-      if (amtMatch) amt = parseInt(amtMatch[1].replace(/,/g, ''));
+      const amtPatterns = [
+        /([0-9,]+)\s*원/,                          // 45,000원
+        /금액[:\s]*([0-9,]+)/,                     // 금액: 45,000
+        /결제금액[:\s]*([0-9,]+)/,                 // 결제금액: 45,000
+        /승인금액[:\s]*([0-9,]+)/,                 // 승인금액: 45,000
+        /일시불\s*([0-9,]+)/,                      // 일시불 45,000
+        /\s([0-9]{1,3}(?:,[0-9]{3})+)\s/,         // 공백으로 구분된 금액
+        /([0-9]{4,})/                              // 4자리 이상 숫자
+      ];
+
+      for (const pattern of amtPatterns) {
+        const match = line.match(pattern);
+        if (match) {
+          const parsed = parseInt(match[1].replace(/,/g, ''));
+          if (parsed >= 100 && parsed <= 100000000) { // 100원 ~ 1억원 범위
+            amt = parsed;
+            break;
+          }
+        }
+      }
       if (!amt) return null;
 
-      // 카드
+      // ===== 카드/결제수단 인식 (확장된 패턴) =====
       let card = '카드';
       const cardPatterns = [
-        [/신한/i, '신한카드'], [/삼성/i, '삼성카드'], [/현대/i, '현대카드'],
-        [/KB|국민/i, 'KB국민카드'], [/롯데/i, '롯데카드'], [/우리/i, '우리카드'],
-        [/하나/i, '하나카드'], [/네이버/i, '네이버페이'], [/카카오/i, '카카오페이']
+        // 주요 카드사
+        [/신한(?:카드|BC)?|신한체크/i, '신한카드'],
+        [/삼성(?:카드)?/i, '삼성카드'],
+        [/현대(?:카드|M)?/i, '현대카드'],
+        [/KB|국민(?:카드)?|KB국민/i, 'KB국민카드'],
+        [/롯데(?:카드)?/i, '롯데카드'],
+        [/우리(?:카드|BC)?/i, '우리카드'],
+        [/하나(?:카드|BC)?/i, '하나카드'],
+        [/NH|농협(?:카드)?|NH농협/i, 'NH농협카드'],
+        [/BC(?:카드)?/i, 'BC카드'],
+        [/IBK|기업은행/i, 'IBK기업은행'],
+        [/씨티|시티|CITI/i, '씨티카드'],
+        [/카카오뱅크|카뱅/i, '카카오뱅크'],
+        // 간편결제
+        [/네이버페이|네이버\s*페이|NAVER|N페이/i, '네이버페이'],
+        [/카카오페이|카카오\s*페이|KAKAO/i, '카카오페이'],
+        [/토스(?:페이)?|toss/i, '토스'],
+        [/페이코|PAYCO/i, '페이코'],
+        [/삼성페이|samsung\s*pay/i, '삼성페이'],
+        [/애플페이|apple\s*pay/i, '애플페이'],
+        // 체크카드
+        [/체크/i, '체크카드'],
+        // 현금/계좌이체
+        [/현금|계좌이체|이체/i, '현금']
       ];
-      for (const [p, n] of cardPatterns) { if (p.test(line)) { card = n; break; } }
 
-      // 날짜
+      for (const [pattern, name] of cardPatterns) {
+        if (pattern.test(line)) {
+          card = name;
+          break;
+        }
+      }
+
+      // ===== 날짜 인식 (다양한 형식 지원) =====
       let date = '';
-      const dateMatch = line.match(/(\d{1,2})\/(\d{1,2})/);
-      if (dateMatch) date = dateMatch[1].padStart(2, '0') + '/' + dateMatch[2].padStart(2, '0');
-      else {
+      const datePatterns = [
+        // MM/DD 형식
+        { regex: /(\d{1,2})\/(\d{1,2})/, handler: (m) => [parseInt(m[1]), parseInt(m[2])] },
+        // MM-DD 형식
+        { regex: /(\d{1,2})-(\d{1,2})(?!\d)/, handler: (m) => [parseInt(m[1]), parseInt(m[2])] },
+        // MM.DD 형식
+        { regex: /(\d{1,2})\.(\d{1,2})(?!\d)/, handler: (m) => [parseInt(m[1]), parseInt(m[2])] },
+        // YYYY/MM/DD 또는 YYYY-MM-DD 또는 YYYY.MM.DD
+        { regex: /(?:20)?(\d{2})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/, handler: (m) => [parseInt(m[2]), parseInt(m[3])] },
+        // MM월 DD일
+        { regex: /(\d{1,2})월\s*(\d{1,2})일/, handler: (m) => [parseInt(m[1]), parseInt(m[2])] },
+        // DDth 또는 DD일 (월 없이)
+        { regex: /(\d{1,2})일/, handler: (m) => {
+          const today = new Date();
+          return [today.getMonth() + 1, parseInt(m[1])];
+        }}
+      ];
+
+      for (const { regex, handler } of datePatterns) {
+        const match = line.match(regex);
+        if (match) {
+          const [month, day] = handler(match);
+          if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+            date = String(month).padStart(2, '0') + '/' + String(day).padStart(2, '0');
+            break;
+          }
+        }
+      }
+
+      if (!date) {
         const today = new Date();
         date = String(today.getMonth() + 1).padStart(2, '0') + '/' + String(today.getDate()).padStart(2, '0');
       }
 
-      // 가맹점
-      let store = line
-        .replace(/\[.*?\]/g, '')
-        .replace(/([0-9,]+)\s*원/g, '')
-        .replace(/\d{1,2}\/\d{1,2}/g, '')
-        .replace(/\d{1,2}:\d{2}/g, '')
-        .replace(/결제|승인|취소|사용/g, '')
-        .trim();
-      if (store.length < 2) store = '기타 결제';
+      // ===== 가맹점/사용처 추출 (개선된 로직) =====
+      let store = '';
 
-      // 카테고리
-      let cat = 'etc';
-      const catPatterns = [
-        [/스타벅스|커피|카페|베이커리|식당|치킨|피자|배달|마트|편의점|GS25|CU|세븐/i, 'food'],
-        [/주유|충전|택시|버스|지하철|교통|KTX/i, 'transport'],
-        [/CGV|메가박스|영화|넷플릭스|게임|노래방/i, 'leisure'],
-        [/병원|약국|의료|치과/i, 'medical'],
-        [/학원|교육|강의/i, 'education'],
-        [/전기|가스|수도|통신/i, 'utility'],
-        [/상품권/i, 'giftcard'],
-        [/쿠팡|네이버|쇼핑|백화점|아울렛|마켓/i, 'shopping']
+      // 패턴 1: 특정 위치에서 가맹점명 추출 (카드사 SMS 형식)
+      const storePatterns = [
+        // [카드사] 금액 가맹점 형식
+        /원\s+([가-힣A-Za-z0-9\s\(\)]+?)(?:\s+\d|$|\s+일시불|\s+승인)/,
+        // 가맹점: xxx 형식
+        /가맹점[:\s]+([가-힣A-Za-z0-9\s\(\)]+?)(?:\s+\d|$)/,
+        // 승인 xxx 형식 (가맹점명)
+        /승인\s+([가-힣A-Za-z0-9\s]+?)(?:\s+\d|원|$)/,
+        // 금액 가맹점 날짜 형식
+        /[0-9,]+원?\s+([가-힣A-Za-z][가-힣A-Za-z0-9\s\(\)]*?)(?:\s+\d{1,2}[\/\.\-]|\s*$)/
       ];
-      for (const [p, c] of catPatterns) { if (p.test(line) || p.test(store)) { cat = c; break; } }
+
+      for (const pattern of storePatterns) {
+        const match = line.match(pattern);
+        if (match && match[1]) {
+          store = match[1].trim();
+          if (store.length >= 2 && store.length <= 30) break;
+        }
+      }
+
+      // 패턴 2: 불필요한 부분 제거 후 추출
+      if (!store || store.length < 2) {
+        store = line
+          .replace(/\[.*?\]/g, ' ')                    // [카드사] 제거
+          .replace(/([0-9,]+)\s*원/g, ' ')             // 금액 제거
+          .replace(/\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2}/g, ' ')  // 날짜 제거
+          .replace(/\d{1,2}[\/\-\.]\d{1,2}/g, ' ')     // 날짜 제거
+          .replace(/\d{1,2}:\d{2}(:\d{2})?/g, ' ')     // 시간 제거
+          .replace(/\d{1,2}월\s*\d{1,2}일/g, ' ')      // 날짜 제거
+          .replace(/결제|승인|취소|사용|일시불|할부|체크|신용|카드/g, ' ')
+          .replace(/잔액|누적|한도|이용금액/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+
+        // 가장 긴 한글+영문 단어 조합 찾기
+        const words = store.split(' ').filter(w => w.length >= 2);
+        if (words.length > 0) {
+          // 브랜드명이 포함된 단어 우선
+          const brandWords = words.filter(w => /[가-힣]{2,}|[A-Za-z]{2,}/.test(w));
+          store = brandWords.length > 0 ? brandWords.join(' ').substring(0, 30) : words[0];
+        }
+      }
+
+      if (!store || store.length < 2) store = '기타 결제';
+
+      // ===== 카테고리 자동 분류 (확장된 패턴) =====
+      let cat = 'etc';
+      const text = originalLine + ' ' + store;
+
+      const catPatterns = [
+        // 식비 - 음식점, 카페, 배달, 마트
+        [/스타벅스|투썸|이디야|메가커피|빽다방|컴포즈|커피빈|할리스|파스쿠찌|카페|CAFE|coffee/i, 'food'],
+        [/맥도날드|버거킹|롯데리아|KFC|맘스터치|피자헛|도미노|파파존스|BBQ|BHC|교촌|굽네|네네|치킨/i, 'food'],
+        [/배달의민족|배민|요기요|쿠팡이츠|배달|BAEMIN/i, 'food'],
+        [/이마트|홈플러스|롯데마트|코스트코|트레이더스|하나로마트|농협마트|GS25|CU|세븐일레븐|미니스톱|이마트24|편의점/i, 'food'],
+        [/식당|레스토랑|횟집|고깃집|삼겹살|갈비|냉면|국밥|설렁탕|감자탕|찌개|김밥|분식|떡볶이|라멘|우동|초밥|스시/i, 'food'],
+        [/베이커리|빵집|파리바게뜨|뚜레쥬르|던킨|크리스피/i, 'food'],
+
+        // 쇼핑 - 온라인몰, 백화점, 의류
+        [/쿠팡|네이버쇼핑|11번가|G마켓|옥션|위메프|티몬|인터파크|SSG|신세계몰|롯데온|현대몰/i, 'shopping'],
+        [/백화점|신세계|롯데백화점|현대백화점|갤러리아|AK플라자/i, 'shopping'],
+        [/아울렛|프리미엄아울렛|스타필드|코엑스몰|IFC몰/i, 'shopping'],
+        [/유니클로|자라|ZARA|H&M|무신사|29CM|W컨셉|지그재그|에이블리|브랜디/i, 'shopping'],
+        [/다이소|아트박스|올리브영|랄라블라|시코르|세포라/i, 'shopping'],
+
+        // 교통 - 주유, 대중교통, 택시
+        [/주유소|SK에너지|GS칼텍스|S-OIL|현대오일|알뜰주유소|충전/i, 'transport'],
+        [/택시|카카오T|타다|우버|UBER/i, 'transport'],
+        [/버스|지하철|메트로|철도|KTX|SRT|무궁화|새마을|코레일|고속버스|시외버스/i, 'transport'],
+        [/하이패스|톨게이트|통행료|주차|파킹/i, 'transport'],
+        [/따릉이|킥보드|씽씽|라임|빔|킥고잉/i, 'transport'],
+
+        // 여가 - 영화, 공연, 게임, 스포츠
+        [/CGV|메가박스|롯데시네마|영화|CINEMA|씨네/i, 'leisure'],
+        [/넷플릭스|NETFLIX|왓챠|WATCHA|웨이브|WAVVE|티빙|TVING|디즈니플러스|쿠팡플레이|유튜브프리미엄/i, 'leisure'],
+        [/노래방|코인노래|수노래/i, 'leisure'],
+        [/PC방|게임|스팀|STEAM|플레이스테이션|닌텐도|엑스박스/i, 'leisure'],
+        [/헬스|피트니스|GYM|짐|요가|필라테스|수영장|골프|테니스|볼링/i, 'leisure'],
+        [/공연|뮤지컬|연극|콘서트|전시|박물관|미술관|인터파크티켓|예스24티켓/i, 'leisure'],
+        [/놀이공원|에버랜드|롯데월드|캐리비안베이|워터파크/i, 'leisure'],
+
+        // 의료 - 병원, 약국
+        [/병원|의원|클리닉|한의원|치과|안과|피부과|성형|정형외과|내과|외과|소아과|산부인과|비뇨기과|이비인후과/i, 'medical'],
+        [/약국|드럭스토어|PHARMACY/i, 'medical'],
+        [/건강검진|검진센터/i, 'medical'],
+
+        // 교육 - 학원, 강의
+        [/학원|어학원|영어|중국어|일본어|어린이|영재|논술|수학|과학/i, 'education'],
+        [/대학교|대학원|학교|등록금/i, 'education'],
+        [/클래스101|탈잉|숨고|크몽|인프런|패스트캠퍼스|코드잇/i, 'education'],
+        [/교보문고|영풍문고|YES24|알라딘|반디앤루니스|서점|도서/i, 'education'],
+
+        // 공과금 - 통신, 전기, 가스
+        [/SKT|KT|LG유플러스|알뜰폰|통신요금|핸드폰|휴대폰/i, 'utility'],
+        [/한국전력|전기요금|전기세|KEPCO/i, 'utility'],
+        [/도시가스|가스요금|가스비/i, 'utility'],
+        [/수도요금|상하수도/i, 'utility'],
+        [/아파트관리비|관리비|공동주택/i, 'utility'],
+        [/인터넷|IPTV|케이블TV/i, 'utility'],
+
+        // 상품권
+        [/상품권|기프트카드|기프티콘|문화상품권|도서상품권|백화점상품권|신세계상품권|롯데상품권/i, 'giftcard'],
+        [/해피머니|컬쳐랜드|북앤라이프/i, 'giftcard']
+      ];
+
+      for (const [pattern, category] of catPatterns) {
+        if (pattern.test(text)) {
+          cat = category;
+          break;
+        }
+      }
 
       return { id: uid(), date, store, card, cat, amt, split: { members: { me: amt } } };
     }
@@ -1662,16 +2006,71 @@
       if (state.charts.yearlyCat) state.charts.yearlyCat.destroy();
 
       const cats = Object.keys(data).filter(k => data[k] > 0);
+
+      if (cats.length === 0) {
+        state.charts.yearlyCat = new Chart(ctx, {
+          type: 'doughnut',
+          data: { labels: ['데이터 없음'], datasets: [{ data: [1], backgroundColor: ['#E5E7EB'] }] },
+          options: { cutout: '65%', plugins: { legend: { display: false }, datalabels: { display: false } } }
+        });
+        return;
+      }
+
+      const total = cats.reduce((sum, c) => sum + data[c], 0);
+
       state.charts.yearlyCat = new Chart(ctx, {
         type: 'doughnut',
         data: {
-          labels: cats.length ? cats.map(c => CATEGORIES[c]?.name || c) : ['데이터 없음'],
+          labels: cats.map(c => CATEGORIES[c]?.name || c),
           datasets: [{
-            data: cats.length ? cats.map(c => data[c]) : [1],
-            backgroundColor: cats.length ? cats.map(c => CATEGORIES[c]?.color) : ['#E5E7EB']
+            data: cats.map(c => data[c]),
+            backgroundColor: cats.map(c => CATEGORIES[c]?.color)
           }]
         },
-        options: { cutout: '65%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } } }
+        plugins: [ChartDataLabels],
+        options: {
+          cutout: '60%',
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                boxWidth: 12,
+                font: { size: 11 },
+                generateLabels: function(chart) {
+                  const data = chart.data;
+                  return data.labels.map((label, i) => {
+                    const value = data.datasets[0].data[i];
+                    const percent = ((value / total) * 100).toFixed(1);
+                    return {
+                      text: `${label} ${fmtShort(value)}원 (${percent}%)`,
+                      fillStyle: data.datasets[0].backgroundColor[i],
+                      strokeStyle: data.datasets[0].backgroundColor[i],
+                      lineWidth: 0,
+                      index: i
+                    };
+                  });
+                }
+              }
+            },
+            datalabels: {
+              color: '#fff',
+              font: { weight: 'bold', size: 11 },
+              formatter: (value, context) => {
+                const percent = ((value / total) * 100).toFixed(0);
+                return percent >= 5 ? percent + '%' : '';
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const value = context.parsed;
+                  const percent = ((value / total) * 100).toFixed(1);
+                  return `${context.label}: ${fmt(value)}원 (${percent}%)`;
+                }
+              }
+            }
+          }
+        }
       });
     }
 
@@ -1812,6 +2211,83 @@
       document.getElementById('yrPerMile').textContent = yMile > 0 && actual > 0
         ? (actual / yMile).toFixed(1) + ' 원/마일'
         : yMile > 0 && actual <= 0 ? '무료! 🎉' : '- 원/마일';
+    }
+
+    // ===== 거래 수정/삭제 =====
+    function openEditModal(tid) {
+      const tx = getTx().find(t => t.id === tid);
+      if (!tx) return;
+
+      document.getElementById('editTxId').value = tid;
+      document.getElementById('editStore').value = tx.store;
+      document.getElementById('editAmount').value = tx.amt;
+      document.getElementById('editDate').value = tx.date;
+      document.getElementById('editCard').value = tx.card;
+      document.getElementById('editCategory').value = tx.cat;
+
+      document.getElementById('editTxModal').classList.add('active');
+    }
+
+    function closeEditModal() {
+      document.getElementById('editTxModal').classList.remove('active');
+    }
+
+    function saveEditTx() {
+      const tid = document.getElementById('editTxId').value;
+      const store = document.getElementById('editStore').value.trim();
+      const amt = parseInt(document.getElementById('editAmount').value);
+      const date = document.getElementById('editDate').value.trim();
+      const card = document.getElementById('editCard').value;
+      const cat = document.getElementById('editCategory').value;
+
+      if (!store) { alert('가맹점명을 입력하세요'); return; }
+      if (!amt || amt <= 0) { alert('올바른 금액을 입력하세요'); return; }
+      if (!/^\d{2}\/\d{2}$/.test(date)) { alert('날짜 형식은 MM/DD 입니다'); return; }
+
+      const k = key(state.year, state.month);
+      const txList = state.data[k] || [];
+      const txIdx = txList.findIndex(t => t.id === tid);
+      if (txIdx === -1) { alert('거래를 찾을 수 없습니다'); return; }
+
+      const oldAmt = txList[txIdx].amt;
+      txList[txIdx].store = store;
+      txList[txIdx].amt = amt;
+      txList[txIdx].date = date;
+      txList[txIdx].card = card;
+      txList[txIdx].cat = cat;
+
+      // 금액이 변경되면 정산 정보도 업데이트
+      if (oldAmt !== amt && txList[txIdx].split?.members) {
+        const members = Object.keys(txList[txIdx].split.members);
+        const share = Math.floor(amt / members.length);
+        const rem = amt - share * members.length;
+        members.forEach((m, i) => {
+          txList[txIdx].split.members[m] = share + (i === 0 ? rem : 0);
+        });
+      }
+
+      save();
+      closeEditModal();
+      state.expandedId = null;
+      render();
+      alert('수정되었습니다!');
+    }
+
+    function deleteTx(tid) {
+      if (!confirm('이 거래를 삭제하시겠습니까?')) return;
+
+      const k = key(state.year, state.month);
+      const txList = state.data[k] || [];
+      const txIdx = txList.findIndex(t => t.id === tid);
+      if (txIdx === -1) return;
+
+      txList.splice(txIdx, 1);
+      state.data[k] = txList;
+      save();
+
+      state.expandedId = null;
+      render();
+      alert('삭제되었습니다!');
     }
   </script>
 </body>
