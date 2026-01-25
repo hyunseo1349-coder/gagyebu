@@ -2,337 +2,297 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart Ledger 2026 Pro - 차트 및 정산 에디션</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Smart Ledger 2026 Pro</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     :root { --primary: #6366F1; --bg: #F9FAFB; --danger: #EF4444; --success: #10B981; --accent: #F59E0B; }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: #1F2937; line-height: 1.5; }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: #1F2937; padding-bottom: 40px; }
     
-    .header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: white; border-bottom: 1px solid #E5E7EB; position: sticky; top: 0; z-index: 100; }
+    .header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: white; border-bottom: 1px solid #E5E7EB; position: sticky; top: 0; z-index: 100; }
     .view-toggle { display: flex; background: #F3F4F6; padding: 4px; border-radius: 12px; }
-    .view-toggle button { padding: 8px 20px; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; background: transparent; transition: 0.2s; font-size: 13px; }
+    .view-toggle button { padding: 6px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; background: transparent; }
     .view-toggle button.active { background: white; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 
-    .main { max-width: 1000px; margin: 0 auto; padding: 20px; }
+    .main { max-width: 800px; margin: 0 auto; padding: 16px; }
 
-    /* 기간 선택기 */
-    .period-nav { display: flex; justify-content: center; align-items: center; gap: 20px; margin-bottom: 24px; background: white; padding: 16px; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
-    .nav-btn { width: 36px; height: 36px; border: 1px solid #E5E7EB; background: white; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
-    .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-    .current-period { font-weight: 800; font-size: 18px; color: var(--primary); min-width: 120px; text-align: center; }
+    /* 대시보드 */
+    .dashboard-grid { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 24px; }
+    @media (min-width: 768px) { .dashboard-grid { grid-template-columns: 1.5fr 1fr; } }
+    .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .card { background: white; padding: 16px; border-radius: 20px; border: 1px solid #E5E7EB; }
+    .card-label { font-size: 11px; color: #6B7280; display: block; margin-bottom: 4px; }
+    .card-value { font-size: 16px; font-weight: 800; }
+    .chart-card { background: white; padding: 20px; border-radius: 20px; border: 1px solid #E5E7EB; display: flex; flex-direction: column; align-items: center; cursor: pointer; }
 
-    /* 대시보드 레이아웃 */
-    .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 30px; }
-    .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .card { background: white; padding: 20px; border-radius: 24px; border: 1px solid #E5E7EB; }
-    .card-label { font-size: 12px; color: #6B7280; display: block; margin-bottom: 6px; }
-    .card-value { font-size: 18px; font-weight: 800; color: #111827; }
-    
-    .chart-card { background: white; padding: 24px; border-radius: 24px; border: 1px solid #E5E7EB; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    #categoryChart { max-width: 200px !important; max-height: 200px !important; }
+    /* 입력 섹션 탭 */
+    .input-box { background: white; border-radius: 20px; padding: 20px; border: 1px solid #E5E7EB; margin-bottom: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+    .tabs { display: flex; gap: 15px; margin-bottom: 20px; border-bottom: 1px solid #F3F4F6; }
+    .tab { padding-bottom: 8px; cursor: pointer; font-size: 14px; font-weight: 700; color: #9CA3AF; transition: 0.2s; }
+    .tab.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
 
-    /* 입력 섹션 */
-    .quick-input-area { background: white; border-radius: 24px; padding: 24px; border: 1px solid #E5E7EB; margin-bottom: 30px; }
-    textarea { width: 100%; height: 80px; padding: 15px; border-radius: 12px; border: 1px solid #E5E7EB; background: #F9FAFB; resize: none; font-family: inherit; margin-bottom: 12px; }
-    .btn { padding: 12px 20px; border-radius: 12px; border: none; cursor: pointer; font-weight: 700; font-size: 14px; }
+    /* 수동 입력 폼 */
+    .manual-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .manual-form input, .manual-form select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #E5E7EB; background: #F9FAFB; font-size: 14px; outline: none; }
+    .full-width { grid-column: span 2; }
+
+    textarea { width: 100%; height: 80px; padding: 12px; border-radius: 12px; border: 1px solid #E5E7EB; background: #F9FAFB; font-size: 14px; margin-bottom: 12px; resize: none; }
+    .btn { padding: 12px; border-radius: 12px; border: none; cursor: pointer; font-weight: 700; transition: 0.2s; font-size: 14px; }
     .btn-primary { background: var(--primary); color: white; width: 100%; }
+    .btn-outline { background: white; border: 1px solid #E5E7EB; color: #6B7280; margin-top: 8px; }
 
-    /* 리스트 */
-    .transaction-item { background: white; padding: 16px; border-radius: 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #F3F4F6; cursor: pointer; transition: 0.2s; }
-    .transaction-item:hover { transform: translateX(5px); border-color: var(--primary); }
-    .tag { font-size: 10px; padding: 2px 8px; border-radius: 6px; font-weight: 700; margin-right: 6px; }
+    /* 리스트 및 태그 */
+    .item { background: white; padding: 16px; border-radius: 16px; margin-bottom: 10px; border: 1px solid #F3F4F6; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+    .tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-right: 4px; }
     .tag-food { background: #FFEDD5; color: #EA580C; }
-    .tag-transport { background: #DBEAFE; color: #2563EB; }
-    .tag-medical { background: #FEE2E2; color: #DC2626; }
     .tag-etc { background: #F3F4F6; color: #4B5563; }
+    .card-badge { font-size: 10px; background: #EEF2FF; color: #4338CA; padding: 2px 6px; border-radius: 4px; margin-top: 4px; display: inline-block; }
+    
+    .filter-badge { display: inline-flex; align-items: center; background: var(--primary); color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; margin-bottom: 12px; cursor: pointer; }
 
-    /* 모달 */
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: flex-end; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
     .modal-overlay.active { display: flex; }
-    .modal { background: white; border-radius: 24px; width: 95%; max-width: 450px; padding: 28px; max-height: 90vh; overflow-y: auto; }
-    
-    .split-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding: 8px; border-radius: 10px; background: #F9FAFB; }
-    .split-input { width: 100px; padding: 6px; border: 1px solid #DDD; border-radius: 6px; text-align: right; }
-    
-    select.cat-select { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #E5E7EB; margin-bottom: 20px; font-weight: 600; }
-
-    @media (max-width: 800px) {
-      .dashboard-grid { grid-template-columns: 1fr; }
-      .summary-grid { grid-template-columns: 1fr 1fr; }
-    }
+    .modal { background: white; border-radius: 24px 24px 0 0; width: 100%; max-width: 500px; padding: 24px; padding-bottom: env(safe-area-inset-bottom); animation: slideUp 0.3s ease; }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
   </style>
 </head>
 <body>
 
   <header class="header">
-    <div style="font-weight: 900; color: var(--primary); font-size: 20px;">Smart Ledger Pro</div>
+    <div style="font-weight:900; color:var(--primary);">Smart Ledger</div>
     <div class="view-toggle">
-      <button id="btn-monthly" class="active" onclick="setView('monthly')">월간</button>
+      <button id="btn-monthly" class="active" onclick="setView('monthly')">월별</button>
       <button id="btn-yearly" onclick="setView('yearly')">연간</button>
     </div>
   </header>
 
   <main class="main">
-    <div class="period-nav">
-      <button class="nav-btn" id="prevBtn" onclick="changePeriod(-1)">◀</button>
-      <span class="current-period" id="periodDisplay">2026년 1월</span>
-      <button class="nav-btn" id="nextBtn" onclick="changePeriod(1)">▶</button>
+    <div style="display:flex; justify-content:center; align-items:center; gap:20px; margin-bottom:20px;">
+      <button class="btn" style="background:none" onclick="changePeriod(-1)">◀</button>
+      <span id="periodDisplay" style="font-weight:800; font-size:18px;">2026년 1월</span>
+      <button class="btn" style="background:none" onclick="changePeriod(1)">▶</button>
     </div>
 
     <div class="dashboard-grid">
       <div class="summary-grid">
-        <div class="card"><span class="card-label">총 지출</span><span class="card-value" id="stat-total">0원</span></div>
-        <div class="card" style="border-left: 4px solid var(--success);"><span class="card-label">🛒 내 실제 지출 (상테크 제외)</span><span class="card-value" id="stat-my">0원</span></div>
-        <div class="card" style="border-left: 4px solid var(--primary);"><span class="card-label">👨‍👩‍👧 가족/타인 지분</span><span class="card-value" id="stat-family">0원</span></div>
-        <div class="card" style="border-left: 4px solid var(--accent);"><span class="card-label">🎫 상품권 (상테크)</span><span class="card-value" id="stat-gc">0원</span></div>
+        <div class="card" style="grid-column: span 2;"><span class="card-label">총 지출</span><span class="card-value" id="stat-total" style="font-size:22px; color:var(--primary)">0원</span></div>
+        <div class="card"><span class="card-label">내 몫</span><span class="card-value" id="stat-my">0원</span></div>
+        <div class="card"><span class="card-label">가족분</span><span class="card-value" id="stat-family">0원</span></div>
       </div>
       <div class="chart-card">
-        <span class="card-label" style="margin-bottom:15px;">카테고리별 지출 비율</span>
-        <canvas id="categoryChart"></canvas>
+        <canvas id="categoryChart" width="160" height="160"></canvas>
       </div>
     </div>
 
-    <div class="quick-input-area">
-      <textarea id="rawInput" placeholder="카드 상세 내역을 붙여넣으세요..."></textarea>
-      <button class="btn btn-primary" onclick="parseAndPreview()">✨ 자동 파싱 및 정화 추가</button>
+    <div class="input-box">
+      <div class="tabs">
+        <div class="tab active" id="tab-auto" onclick="switchInput('auto')">스마트 자동</div>
+        <div class="tab" id="tab-manual" onclick="switchInput('manual')">직접 수동</div>
+      </div>
+      
+      <div id="area-auto">
+        <textarea id="rawInput" placeholder="카드 내역 복사..."></textarea>
+        <button class="btn btn-primary" onclick="parseText()">✨ 내역 자동 추가</button>
+      </div>
+
+      <div id="area-manual" style="display:none;">
+        <div class="manual-form">
+          <input type="text" id="mStore" placeholder="지출처" class="full-width">
+          <input type="number" id="mAmt" placeholder="금액">
+          <input type="date" id="mDate" value="2026-01-25">
+          <select id="mCard">
+            <option value="현대카드">현대카드</option>
+            <option value="대한항공카드 150">대한항공카드 150</option>
+            <option value="아멕스 그린">아멕스 그린</option>
+            <option value="현금">현금/이체</option>
+          </select>
+          <select id="mCat" class="full-width">
+            <option value="food">식비</option>
+            <option value="transport">교통</option>
+            <option value="shopping">쇼핑</option>
+            <option value="medical">의료</option>
+            <option value="etc">기타</option>
+          </select>
+          <button class="btn btn-primary full-width" onclick="addManual()">저장하기</button>
+        </div>
+      </div>
     </div>
 
+    <div id="filterInfo"></div>
     <div id="listArea"></div>
   </main>
 
-  <div class="modal-overlay" id="splitModal">
+  <div class="modal-overlay" id="editModal">
     <div class="modal">
-      <h3 id="splitTitle">항목 상세 설정</h3>
-      <p id="splitTotalDisplay" style="font-size: 14px; color: #6B7280; margin-bottom: 20px;"></p>
-      
-      <label class="card-label">카테고리 변경</label>
-      <select id="editCategory" class="cat-select">
-        <option value="food">식비</option>
-        <option value="transport">교통</option>
-        <option value="shopping">쇼핑</option>
-        <option value="living">생활</option>
-        <option value="medical">의료</option>
-        <option value="etc">기타</option>
-        <option value="giftcard">상품권</option>
-      </select>
-
-      <label class="card-label">인원별 정산 (1/N)</label>
-      <div id="splitList"></div>
-      <div id="splitValidate" style="text-align:right; font-size:12px; margin-top:10px; font-weight:700;"></div>
-
-      <div style="display:flex; gap:10px; margin-top:24px">
-        <button class="btn" style="background:#F3F4F6; flex:1" onclick="closeModal('splitModal')">닫기</button>
-        <button class="btn btn-primary" id="saveSplitBtn" style="flex:2" onclick="saveSettlement()">저장하기</button>
+      <h3 style="margin-bottom:15px;">내역 상세 수정</h3>
+      <div style="margin-bottom:20px;">
+        <label class="card-label">결제 수단 (인식 오류 시 수정)</label>
+        <select id="editCard" style="width:100%; padding:12px; border-radius:10px; border:1px solid #DDD;">
+          <option value="현대카드">현대카드</option>
+          <option value="대한항공카드 150">대한항공카드 150</option>
+          <option value="아멕스 그린">아멕스 그린</option>
+          <option value="현금">현금/이체</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+      <div id="splitSection">
+        <label class="card-label">인원별 정산</label>
+        <div id="splitList"></div>
+      </div>
+      <div style="display:flex; gap:10px; margin-top:30px;">
+        <button class="btn btn-outline" style="flex:1" onclick="closeModal()">취소</button>
+        <button class="btn btn-primary" style="flex:2" onclick="saveEdit()">수정 완료</button>
       </div>
     </div>
   </div>
 
   <script>
-    const START_YEAR = 2026;
-    const DATA_KEY = `sl_data_pro_v3`;
-    const CAT_MAP = { food: '식비', transport: '교통', shopping: '쇼핑', living: '생활', medical: '의료', etc: '기타', giftcard: '상품권' };
-    const CAT_COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#6B7280', '#EC4899'];
+    const STORAGE_KEY = 'sl_v8_final_hybrid';
+    const CAT_LABELS = { food: '식비', transport: '교통', shopping: '쇼핑', medical: '의료', etc: '기타', giftcard: '상품권' };
+    const MEMBERS = { me: '나', mom: '엄마', dad: '아빠', bro: '동생' };
 
     let state = {
       view: 'monthly', year: 2026, month: 1,
-      data: JSON.parse(localStorage.getItem(DATA_KEY)) || { transactions: [] },
-      currentId: null,
-      chart: null
+      data: JSON.parse(localStorage.getItem(STORAGE_KEY)) || { list: [] },
+      filter: null, curId: null, chart: null
     };
 
-    function saveData() { localStorage.setItem(DATA_KEY, JSON.stringify(state.data)); }
-
-    function setView(v) {
-      state.view = v;
-      document.getElementById('btn-monthly').classList.toggle('active', v === 'monthly');
-      document.getElementById('btn-yearly').classList.toggle('active', v === 'yearly');
-      render();
+    function switchInput(t) {
+      document.getElementById('area-auto').style.display = t === 'auto' ? 'block' : 'none';
+      document.getElementById('area-manual').style.display = t === 'manual' ? 'block' : 'none';
+      document.getElementById('tab-auto').classList.toggle('active', t === 'auto');
+      document.getElementById('tab-manual').classList.toggle('active', t === 'manual');
     }
 
-    function changePeriod(dir) {
-      if (state.view === 'monthly') {
-        state.month += dir;
-        if (state.month > 12) { state.month = 1; state.year++; }
-        if (state.month < 1) { state.month = 12; state.year--; }
-      } else { state.year += dir; }
-      if (state.year < START_YEAR) { state.year = START_YEAR; state.month = 1; }
-      render();
+    function addManual() {
+      const store = document.getElementById('mStore').value;
+      const amt = parseInt(document.getElementById('mAmt').value);
+      if(!store || !amt) return alert("내역을 입력하세요.");
+      
+      state.data.list.push({
+        id: Date.now(),
+        date: document.getElementById('mDate').value,
+        store, amt, 
+        card: document.getElementById('mCard').value,
+        cat: document.getElementById('mCat').value,
+        split: { me: amt, mom:0, dad:0, bro:0 }
+      });
+      saveAndRender();
     }
 
-    // 파싱 시 카테고리 자동 분류 로직
-    function autoCategorize(store) {
-      if (/상품권|페이타랩|쿠폰|기프티콘/.test(store)) return 'giftcard';
-      if (/식당|소호정|카페|스타벅스|완뚝|배민|우아한|KFC|푸가|스시다이몬|국수|낙지|아웃백|감자탕|맥도날드/.test(store)) return 'food';
-      if (/우버|택시|지하철|버스|코레일/.test(store)) return 'transport';
-      if (/병원|약국|의원|의료|내과/.test(store)) return 'medical';
-      if (/백화점|쇼핑|크림|네이버페이|쿠팡|마트|식품관/.test(store)) return 'shopping';
-      if (/관리비|통신|유플러스|전기|수도/.test(store)) return 'living';
+    function parseText() {
+      const raw = document.getElementById('rawInput').value.trim();
+      const lines = raw.split('\n').map(l => l.trim()).filter(l => l !== "");
+      lines.forEach((line, i) => {
+        if (line.endsWith('원') && /^[0-9,]+원$/.test(line)) {
+          const amt = parseInt(line.replace(/[^0-9]/g, ''));
+          let store = "지출처 미상", card = "현대카드", date = "2026-01-25";
+          
+          for(let j=i-1; j>i-10 && j>=0; j--){
+            const l = lines[j];
+            if(l.includes('카드') || l.includes('Express')) card = l;
+            if(!l.includes(':') && !l.includes('원') && !l.includes('카드') && store === "지출처 미상") store = l;
+          }
+          state.data.list.push({ id: Date.now()+Math.random(), date, store, amt, card, cat: autoCat(store), split: { me: amt, mom:0, dad:0, bro:0 } });
+        }
+      });
+      saveAndRender();
+      document.getElementById('rawInput').value = "";
+    }
+
+    function autoCat(s) {
+      if (/식당|카페|배민|소호정|완뚝/.test(s)) return 'food';
+      if (/택시|우버|지하철/.test(s)) return 'transport';
       return 'etc';
     }
 
-    function openSettlement(id) {
-      const t = state.data.transactions.find(x => x.id === id);
-      state.currentId = id;
-      document.getElementById('splitTotalDisplay').textContent = `${t.store} - ${t.amount.toLocaleString()}원`;
-      document.getElementById('editCategory').value = t.category;
-
-      const members = { me: '나', mom: '엄마', dad: '아빠', bro: '동생', friend: '친구' };
-      if (!t.split) t.split = { me: t.amount, mom:0, dad:0, bro:0, friend:0 };
-
-      document.getElementById('splitList').innerHTML = Object.entries(members).map(([key, name]) => `
-        <div class="split-row">
-          <span>${name}</span>
-          <input type="number" class="split-input" id="split-${key}" value="${t.split[key] || 0}" oninput="validateSplit(${t.amount})">
+    function openEdit(id) {
+      state.curId = id;
+      const t = state.data.list.find(x => x.id === id);
+      document.getElementById('editCard').value = t.card.includes('대한항공') ? '대한항공카드 150' : (t.card.includes('Express') ? '아멕스 그린' : (t.card.includes('현금') ? '현금' : '현대카드'));
+      
+      document.getElementById('splitList').innerHTML = Object.entries(MEMBERS).map(([k,v]) => `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+          <span>${v}</span>
+          <input type="number" id="es-${k}" value="${t.split[k]}" style="width:100px; padding:8px; border:1px solid #DDD; border-radius:8px; text-align:right;">
         </div>
       `).join('');
-      validateSplit(t.amount);
-      document.getElementById('splitModal').classList.add('active');
+      document.getElementById('editModal').classList.add('active');
     }
 
-    function validateSplit(total) {
-      const inputs = document.querySelectorAll('.split-input');
-      let sum = 0;
-      inputs.forEach(i => sum += parseInt(i.value) || 0);
-      const diff = total - sum;
-      const v = document.getElementById('splitValidate');
-      v.textContent = diff === 0 ? "✓ 금액 일치" : `잔액: ${diff.toLocaleString()}원`;
-      v.style.color = diff === 0 ? "var(--success)" : "var(--danger)";
-      document.getElementById('saveSplitBtn').disabled = diff !== 0;
+    function saveEdit() {
+      const t = state.data.list.find(x => x.id === state.curId);
+      t.card = document.getElementById('editCard').value;
+      Object.keys(MEMBERS).forEach(k => t.split[k] = parseInt(document.getElementById(`es-${k}`).value)||0);
+      saveAndRender();
+      closeModal();
     }
 
-    function saveSettlement() {
-      const t = state.data.transactions.find(x => x.id === state.currentId);
-      t.category = document.getElementById('editCategory').value;
-      t.split = {
-        me: parseInt(document.getElementById('split-me').value) || 0,
-        mom: parseInt(document.getElementById('split-mom').value) || 0,
-        dad: parseInt(document.getElementById('split-dad').value) || 0,
-        bro: parseInt(document.getElementById('split-bro').value) || 0,
-        friend: parseInt(document.getElementById('split-friend').value) || 0
-      };
-      saveData();
-      closeModal('splitModal');
-      render();
-    }
+    function closeModal() { document.getElementById('editModal').classList.remove('active'); }
+    function saveAndRender() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data)); render(); }
 
     function render() {
-      document.getElementById('periodDisplay').textContent = state.view === 'monthly' ? `${state.year}년 ${state.month}월` : `${state.year}년`;
+      document.getElementById('periodDisplay').textContent = `${state.year}년 ${state.month}월`;
+      const periodData = state.data.list.filter(t => {
+        const d = new Date(t.date);
+        return d.getFullYear() === state.year && (d.getMonth()+1) === state.month;
+      });
+
+      let totals = { total:0, my:0, family:0 }, cats = {};
+      periodData.forEach(t => {
+        totals.total += t.amt; totals.my += t.split.me; totals.family += (t.amt - t.split.me);
+        if(t.cat !== 'giftcard') cats[t.cat] = (cats[t.cat] || 0) + t.amt;
+      });
+
+      document.getElementById('stat-total').textContent = totals.total.toLocaleString() + '원';
+      document.getElementById('stat-my').textContent = totals.my.toLocaleString() + '원';
+      document.getElementById('stat-family').textContent = totals.family.toLocaleString() + '원';
+
+      updateChart(cats, totals.total);
       
-      let filtered = state.data.transactions.filter(t => {
-        const d = new Date(t.fullDate);
-        return d.getFullYear() === state.year && (state.view === 'yearly' || (d.getMonth()+1) === state.month);
-      });
-
-      let stats = { total: 0, my: 0, family: 0, gc: 0 };
-      let catSums = { food: 0, transport: 0, shopping: 0, living: 0, medical: 0, etc: 0 };
-
-      filtered.forEach(t => {
-        stats.total += t.amount;
-        if (t.category === 'giftcard') stats.gc += t.amount;
-        else {
-          const myPart = t.split ? t.split.me : t.amount;
-          stats.my += myPart;
-          stats.family += (t.amount - myPart);
-          catSums[t.category] = (catSums[t.category] || 0) + t.amount;
-        }
-      });
-
-      document.getElementById('stat-total').textContent = stats.total.toLocaleString() + '원';
-      document.getElementById('stat-my').textContent = stats.my.toLocaleString() + '원';
-      document.getElementById('stat-family').textContent = stats.family.toLocaleString() + '원';
-      document.getElementById('stat-gc').textContent = stats.gc.toLocaleString() + '원';
-
-      updateChart(catSums);
-
-      const listArea = document.getElementById('listArea');
-      listArea.innerHTML = filtered.sort((a,b) => new Date(b.fullDate)-new Date(a.fullDate)).map(t => `
-        <div class="transaction-item" onclick="openSettlement(${t.id})">
+      const filtered = state.filter ? periodData.filter(t => t.cat === state.filter) : periodData;
+      document.getElementById('listArea').innerHTML = filtered.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(t => `
+        <div class="item" onclick="openEdit(${t.id})">
           <div>
-            <span class="tag tag-${t.category}">${CAT_MAP[t.category]}</span>
-            <span style="font-weight:700;">${t.store}</span>
-            <div style="font-size:11px; color:#9CA3AF; margin-top:4px;">${t.fullDate}</div>
+            <span class="tag tag-${t.cat}">${CAT_LABELS[t.cat]}</span>
+            <strong>${t.store}</strong><br>
+            <span class="card-badge">${t.card}</span>
           </div>
           <div style="text-align:right">
-            <div style="font-weight:800;">${t.amount.toLocaleString()}원</div>
-            ${t.split && (t.amount !== t.split.me) ? `<div style="font-size:10px; color:var(--primary)">내 몫: ${t.split.me.toLocaleString()}</div>` : ''}
+            <strong>${t.amt.toLocaleString()}원</strong>
+            ${t.split.me !== t.amt ? `<div style="font-size:10px; color:var(--primary)">내 몫: ${t.split.me.toLocaleString()}원</div>` : ''}
           </div>
         </div>
-      `).join('') || '<div style="text-align:center; padding:40px; color:#9CA3AF;">내역이 없습니다.</div>';
+      `).join('') || '<p style="text-align:center;padding:40px;color:#9CA3AF">내역이 없습니다.</p>';
     }
 
-    function updateChart(sums) {
+    function updateChart(data, total) {
       const ctx = document.getElementById('categoryChart').getContext('2d');
-      const data = Object.values(sums);
-      const labels = Object.keys(sums).map(k => CAT_MAP[k]);
-
       if (state.chart) state.chart.destroy();
-      
+      const keys = Object.keys(data);
       state.chart = new Chart(ctx, {
         type: 'doughnut',
         data: {
-          labels: labels,
-          datasets: [{
-            data: data,
-            backgroundColor: CAT_COLORS,
-            borderWidth: 0,
-            hoverOffset: 10
-          }]
+          labels: keys.map(k=>CAT_LABELS[k]),
+          datasets: [{ data: Object.values(data), backgroundColor: ['#6366F1','#10B981','#F59E0B','#EF4444','#8B5CF6'], borderWidth:0 }]
         },
         options: {
+          cutout: '70%',
           plugins: { legend: { display: false } },
-          cutout: '70%'
+          onClick: (e, el) => { if(el.length) { state.filter = keys[el[0].index]; render(); } }
         }
       });
     }
 
-    function parseAndPreview() {
-      const text = document.getElementById('rawInput').value.trim();
-      if (!text) return;
-      const lines = text.split('\n').map(l => l.trim()).filter(l => l !== "");
-      let rawItems = [];
-      const todayStr = "2026-01-25";
+    function changePeriod(v) { state.month += v; if(state.month>12){state.month=1;state.year++;} if(state.month<1){state.month=12;state.year--;} render(); }
+    function setView(v) { state.view = v; render(); }
 
-      for (let i = 0; i < lines.length; i++) {
-        if (lines[i].endsWith('원') && !lines[i].includes('신청하기')) {
-          let amount = parseInt(lines[i].replace(/원|,/g, ''));
-          let status = lines[i-1], dateLine = lines[i-3], store = lines[i-5] || "가맹점";
-          let finalDate = todayStr;
-          if (dateLine && dateLine !== '오늘') {
-             const dMatch = dateLine.match(/(\d{2})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
-             if (dMatch) finalDate = `20${dMatch[1]}-${String(dMatch[2]).padStart(2, '0')}-${String(dMatch[3]).padStart(2, '0')}`;
-          }
-          rawItems.push({ id: Date.now() + Math.random(), fullDate: finalDate, store, amount, status });
-        }
-      }
-      
-      const cancellations = rawItems.filter(x => x.status === '거래취소');
-      const approvals = rawItems.filter(x => x.status !== '거래취소');
-      let skipIds = new Set();
-      cancellations.forEach(can => {
-        const m = approvals.find(app => !skipIds.has(app.id) && app.amount === can.amount && app.store.substring(0,3) === can.store.substring(0,3));
-        if (m) skipIds.add(m.id);
-      });
-
-      approvals.forEach(app => {
-        if (!skipIds.has(app.id)) {
-          state.data.transactions.push({
-            ...app,
-            category: autoCategorize(app.store),
-            split: { me: app.amount, mom: 0, dad: 0, bro: 0, friend: 0 }
-          });
-        }
-      });
-      saveData();
-      document.getElementById('rawInput').value = '';
-      render();
-    }
-
-    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
     render();
   </script>
 </body>
