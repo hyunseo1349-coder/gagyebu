@@ -1,111 +1,147 @@
-// 1. 초기 데이터 설정 (localStorage 활용)
-let monthlyData = JSON.parse(localStorage.getItem('smartLedgerData')) || {};
-let currentYear = new Date().getFullYear();
-let currentMonth = new Date().getMonth() + 1;
+// [1] 초기 설정 및 데이터 불러오기
+let currentYear = 2026;
+let currentMonth = 1;
 let includeGiftCard = true;
 
-// 2. 화면 초기화 및 렌더링 함수
+// 로컬 스토리지에서 데이터를 가져옵니다 (데이터 키: 'smart_ledger_2026_v1')
+let monthlyData = JSON.parse(localStorage.getItem('smart_ledger_2026_v1')) || {};
+
+// [2] 화면 그리기 함수 (Render)
 function render() {
   const key = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
   const data = monthlyData[key] || [];
   const listElement = document.getElementById('transactionList');
   
-  document.getElementById('monthDisplay').textContent = `${currentYear}년 ${currentMonth}월`;
-  listElement.innerHTML = '';
+  // 헤더 날짜 업데이트
+  document.getElementById('yearDisplay').textContent = `${currentYear}년`;
+  document.getElementById('monthDisplay').textContent = `${currentMonth}월`;
+  
+  listElement.innerHTML = ''; // 리스트 초기화
 
-  let total = 0;      // 총 지출
-  let living = 0;     // 실제 생활비
-  let myShare = 0;    // 내 실제 부담
-  let gcTotal = 0;    // 상품권 총액
+  let total = 0, myShare = 0, gcTotal = 0;
 
+  // 데이터 반복 처리
   data.forEach(item => {
-    // 상품권 포함 여부 토글 로직
+    // 상품권 제외 필터링
     if (!includeGiftCard && item.category === 'giftcard') return;
 
     total += item.amount;
     if (item.category === 'giftcard') gcTotal += item.amount;
-    else living += item.amount;
     
-    // 내 부담금 (정산 기능 확장 전까지는 전체 금액을 내 부담으로 처리)
-    myShare += item.amount;
+    // 정산(1/N) 반영 계산
+    const itemMyShare = item.isSplit ? item.amount * 0.5 : item.amount;
+    myShare += itemMyShare;
 
-    // 리스트 아이템 생성
+    // 리스트 아이템 추가
     const div = document.createElement('div');
     div.className = 'transaction-item';
     div.innerHTML = `
-      <div>
-        <div class="store-name">${item.store}</div>
-        <div style="font-size: 12px; color: #9CA3AF;">${item.date} • ${getCategoryName(item.category)}</div>
+      <div class="item-info">
+        <div>${item.store}</div>
+        <div>${item.date} ${item.isSplit ? ' • 1/N 정산 적용' : ''}</div>
       </div>
-      <div class="amount ${item.category === 'giftcard' ? 'giftcard' : ''}">
+      <div class="item-amount" style="color:${item.category === 'giftcard' ? '#0D9488' : '#1F2937'}">
         ${item.amount.toLocaleString()}원
       </div>
     `;
     listElement.appendChild(div);
   });
 
-  // 요약 정보 업데이트
+  // 요약 카드 숫자 업데이트
   document.getElementById('totalAmount').textContent = total.toLocaleString() + '원';
-  document.getElementById('livingAmount').textContent = living.toLocaleString() + '원';
   document.getElementById('myAmount').textContent = myShare.toLocaleString() + '원';
   document.getElementById('giftcardAmount').textContent = gcTotal.toLocaleString() + '원';
 }
 
-// 3. 지출 내역 저장 함수
+// [3] 연도 및 월 이동 기능
+function changeYear(offset) {
+  currentYear += offset;
+  render();
+}
+
+function changeMonth(offset) {
+  currentMonth += offset;
+  if (currentMonth > 12) { 
+    currentMonth = 1; currentYear++; 
+  } else if (currentMonth < 1) { 
+    currentMonth = 12; currentYear--; 
+  }
+  render();
+}
+
+// [4] 새 지출 내역 저장
 function submitTransaction() {
   const dateInput = document.getElementById('inputDate').value;
   const store = document.getElementById('inputStore').value;
   const amount = parseInt(document.getElementById('inputAmount').value);
   const category = document.getElementById('inputCategory').value;
+  const isSplit = document.getElementById('isSplit').checked;
 
   if (!dateInput || !store || isNaN(amount)) {
-    alert('내용을 모두 입력해주세요!');
+    alert('모든 내용을 정확히 입력해주세요!');
     return;
   }
 
-  const dateObj = new Date(dateInput);
-  const key = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+  const d = new Date(dateInput);
+  const year = d.getFullYear();
+  const month = d.getMonth() + 1;
+  const key = `${year}-${String(month).padStart(2, '0')}`;
   
   const newItem = {
     id: Date.now(),
-    date: `${String(dateObj.getMonth() + 1).padStart(2, '0')}/${String(dateObj.getDate()).padStart(2, '0')}`,
-    store,
-    amount,
-    category
+    date: `${String(month).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`,
+    store, amount, category, isSplit
   };
 
+  // 데이터 저장 구조 생성
   if (!monthlyData[key]) monthlyData[key] = [];
-  monthlyData[key].unshift(newItem); // 최신순으로 정렬
-
-  localStorage.setItem('smartLedgerData', JSON.stringify(monthlyData));
+  monthlyData[key].unshift(newItem); // 최신 내역이 위로 오게 추가
+  
+  // 로컬 스토리지에 저장
+  localStorage.setItem('smart_ledger_2026_v1', JSON.stringify(monthlyData));
+  
+  // 입력한 연도/월로 이동하여 즉시 결과 확인
+  currentYear = year;
+  currentMonth = month;
+  
   render();
   closeModal();
   
-  // 입력 폼 리셋
+  // 입력 폼 비우기
   document.getElementById('inputStore').value = '';
   document.getElementById('inputAmount').value = '';
+  document.getElementById('isSplit').checked = false;
 }
 
-// 4. 유틸리티 함수들
-function getCategoryName(cat) {
-  const names = { food: '식비', shopping: '쇼핑', giftcard: '상품권', transport: '교통', etc: '기타' };
-  return names[cat] || '기타';
+// [5] 마일리지 계산기 로직
+function calcMile() {
+  const buy = parseFloat(document.getElementById('mileBuy').value);
+  const sell = parseFloat(document.getElementById('mileSell').value);
+  const point = parseFloat(document.getElementById('milePoint').value);
+  
+  if (buy && sell && point) {
+    const cost = buy - sell;
+    const perMile = cost / point;
+    const resultDiv = document.getElementById('mileResult');
+    resultDiv.innerHTML = `실질 비용: ${cost}원<br>1마일당 <span style="font-size:20px;">${perMile.toFixed(2)}원</span>`;
+  } else {
+    alert('모든 수치를 입력해주세요.');
+  }
 }
+
+// [6] 모달 및 필터 제어
+function openModal() { document.getElementById('modalOverlay').classList.add('active'); }
+function closeModal() { document.getElementById('modalOverlay').classList.remove('active'); }
+function openMileModal() { document.getElementById('mileModal').classList.add('active'); }
+function closeMileModal() { document.getElementById('mileModal').classList.remove('active'); }
 
 function toggleGiftcard() {
   includeGiftCard = !includeGiftCard;
-  document.getElementById('gcToggle').classList.toggle('off', !includeGiftCard);
+  const btn = document.getElementById('gcFilterBtn');
+  btn.textContent = includeGiftCard ? "상품권 포함됨" : "상품권 제외됨";
   render();
 }
 
-function openModal() {
-  document.getElementById('modalOverlay').classList.add('active');
-  document.getElementById('inputDate').value = new Date().toISOString().split('T')[0];
-}
-
-function closeModal() {
-  document.getElementById('modalOverlay').classList.remove('active');
-}
-
-// 5. 초기 실행
+// 시작 시 오늘 날짜 세팅 및 화면 렌더링
+document.getElementById('inputDate').value = new Date().toISOString().split('T')[0];
 render();
