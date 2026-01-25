@@ -5,11 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>가계부</title>
 
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0984e3">
-
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- CSS -->
   <link rel="stylesheet" href="style.css" />
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
 </head>
 <body>
 
@@ -26,18 +29,12 @@
 </header>
 
 <div class="container">
-  <div class="card">
-    <h4>설정</h4>
-    <label class="toggle">
-      <input type="checkbox" id="darkToggle" /> 다크모드
-    </label>
-  </div>
 
   <div class="card">
-    <h4>카테고리 설정</h4>
-    <ul id="categoryList"></ul>
-    <input id="newCategory" placeholder="새 카테고리 이름" />
-    <button onclick="addCategory()">카테고리 추가</button>
+    <h4>설정</h4>
+    <label>
+      <input type="checkbox" id="darkToggle" /> 다크모드
+    </label>
   </div>
 
   <div class="card">
@@ -49,102 +46,142 @@
   </div>
 
   <div class="card">
-    <h4>카드 내역 붙여넣기</h4>
-    <textarea id="paste" rows="4"></textarea>
-    <button onclick="parsePaste()">분석 추가</button>
-  </div>
-
-  <div class="card">
     <h4>통계</h4>
-    <canvas id="chartCanvas"></canvas>
+    <canvas id="chart"></canvas>
   </div>
 
   <div class="card">
     <h4>내역</h4>
     <ul id="list"></ul>
   </div>
+
 </div>
 
 <script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js');
-}
-
+/* ===== STATE ===== */
 const state = {
-  darkMode: localStorage.getItem('dark') === 'true',
-  viewMode: 'monthly',
+  view: 'monthly',
   year: 2026,
   month: 1,
-  categories: JSON.parse(localStorage.getItem('categories')) || [
-    { key:'food', label:'식비', color:'#ff7675' },
-    { key:'transport', label:'교통', color:'#74b9ff' },
-    { key:'shopping', label:'쇼핑', color:'#a29bfe' },
-    { key:'etc', label:'기타', color:'#b2bec3' }
+  dark: false,
+  categories: [
+    { key: 'food', label: '식비' },
+    { key: 'transport', label: '교통' },
+    { key: 'shopping', label: '쇼핑' },
+    { key: 'etc', label: '기타' }
   ],
-  expenses: JSON.parse(localStorage.getItem('expenses')) || []
+  expenses: JSON.parse(localStorage.getItem('expenses') || '[]')
 };
+
+/* ===== ELEMENTS ===== */
+const periodEl = document.getElementById('period');
+const listEl = document.getElementById('list');
+const categoryEl = document.getElementById('category');
+const amountEl = document.getElementById('amount');
+const memoEl = document.getElementById('memo');
+const darkToggle = document.getElementById('darkToggle');
 
 let chart;
 
-function setView(v){ state.viewMode=v; render(); }
-function move(d){
-  if(state.viewMode==='monthly'){
-    state.month+=d==='prev'?-1:1;
-    if(state.month===0){state.month=12;state.year--;}
-    if(state.month===13){state.month=1;state.year++;}
-  } else state.year+=d==='prev'?-1:1;
+/* ===== NAV ===== */
+function setView(v) {
+  state.view = v;
   render();
 }
 
-function addCategory(){
-  if(!newCategory.value.trim())return;
-  state.categories.push({key:newCategory.value.toLowerCase(),label:newCategory.value,color:'#999999'});
-  localStorage.setItem('categories',JSON.stringify(state.categories));
-  newCategory.value='';
+function move(dir) {
+  if (state.view === 'monthly') {
+    state.month += dir === 'prev' ? -1 : 1;
+    if (state.month === 0) { state.month = 12; state.year--; }
+    if (state.month === 13) { state.month = 1; state.year++; }
+  } else {
+    state.year += dir === 'prev' ? -1 : 1;
+  }
   render();
 }
 
-function addExpense(){
-  if(!amount.value)return;
-  state.expenses.push({amount:+amount.value,category:category.value,memo:memo.value,year:state.year,month:state.month});
-  localStorage.setItem('expenses',JSON.stringify(state.expenses));
-  amount.value='';memo.value='';
-  render();
-}
-
-function parsePaste(){
-  paste.value.split('\n').forEach(l=>{
-    const m=l.match(/(\d+[,.]?\d*)/);
-    if(!m)return;
-    state.expenses.push({amount:+m[1].replace(',',''),memo:l,category:'etc',year:state.year,month:state.month});
+/* ===== ADD ===== */
+function addExpense() {
+  if (!amountEl.value) return;
+  state.expenses.push({
+    amount: Number(amountEl.value),
+    category: categoryEl.value,
+    memo: memoEl.value,
+    year: state.year,
+    month: state.month
   });
-  localStorage.setItem('expenses',JSON.stringify(state.expenses));
-  paste.value='';
+  localStorage.setItem('expenses', JSON.stringify(state.expenses));
+  amountEl.value = '';
+  memoEl.value = '';
   render();
 }
 
-function render(){
-  document.documentElement.classList.toggle('dark',state.darkMode);
-  darkToggle.checked=state.darkMode;
-  period.textContent=state.viewMode==='monthly'?`${state.year}년 ${state.month}월`:`${state.year}년`;
+/* ===== RENDER ===== */
+function render() {
+  document.documentElement.classList.toggle('dark', state.dark);
 
-  category.innerHTML=state.categories.map(c=>`<option value="${c.key}">${c.label}</option>`).join('');
-  categoryList.innerHTML=state.categories.map(c=>`<li class="category-item"><span class="color-dot" style="background:${c.color}"></span>${c.label}</li>`).join('');
+  periodEl.textContent =
+    state.view === 'monthly'
+      ? `${state.year}년 ${state.month}월`
+      : `${state.year}년`;
 
-  list.innerHTML='';
-  const sum={}; state.categories.forEach(c=>sum[c.key]=0);
-  state.expenses.filter(e=>state.viewMode==='monthly'?e.year===state.year&&e.month===state.month:e.year===state.year)
-    .forEach(e=>{
-      sum[e.category]+=e.amount;
-      list.innerHTML+=`<li class="expense-item"><span>${e.memo}</span><span class="badge" style="background:${state.categories.find(c=>c.key===e.category).color}">${e.amount.toLocaleString()}원</span></li>`;
-    });
+  categoryEl.innerHTML = state.categories
+    .map(c => `<option value="${c.key}">${c.label}</option>`)
+    .join('');
 
-  if(chart)chart.destroy();
-  chart=new Chart(chartCanvas,{type:'pie',data:{labels:state.categories.map(c=>c.label),datasets:[{data:state.categories.map(c=>sum[c.key]),backgroundColor:state.categories.map(c=>c.color)}]},options:{plugins:{legend:{position:'bottom'}}}});
+  const filtered = state.expenses.filter(e =>
+    state.view === 'monthly'
+      ? e.year === state.year && e.month === state.month
+      : e.year === state.year
+  );
+
+  listEl.innerHTML = '';
+  const sum = {};
+  state.categories.forEach(c => sum[c.key] = 0);
+
+  filtered.forEach(e => {
+    sum[e.category] += e.amount;
+    listEl.innerHTML += `
+      <li class="expense-item">
+        <span>${e.memo || ''}</span>
+        <span class="badge ${e.category}">
+          ${e.amount.toLocaleString()}원
+        </span>
+      </li>`;
+  });
+
+  if (chart) chart.destroy();
+  chart = new Chart(document.getElementById('chart'), {
+    type: 'pie',
+    data: {
+      labels: state.categories.map(c => c.label),
+      datasets: [{
+        data: state.categories.map(c => sum[c.key]),
+        backgroundColor: [
+          'var(--food)',
+          'var(--transport)',
+          'var(--shopping)',
+          'var(--etc)'
+        ]
+      }]
+    },
+    options: { plugins: { legend: { position: 'bottom' } } }
+  });
 }
 
-darkToggle.onchange=()=>{state.darkMode=darkToggle.checked;localStorage.setItem('dark',state.darkMode);render();};
+/* ===== DARK MODE ===== */
+darkToggle.addEventListener('change', e => {
+  state.dark = e.target.checked;
+  render();
+});
+
 render();
+
+/* ===== SW ===== */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js');
+}
 </script>
+
 </body>
 </html>
