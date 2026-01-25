@@ -3,29 +3,1816 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>나만의 가계부 - Smart Parsing</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <title>Smart Ledger Pro - 스마트 가계부</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
   <style>
-    :root { --primary: #6366F1; --bg: #F9FAFB; --danger: #EF4444; --success: #10B981; --accent: #F59E0B; }
+    :root {
+      --primary: #6366F1;
+      --primary-light: #EEF2FF;
+      --success: #10B981;
+      --success-light: #D1FAE5;
+      --warning: #F59E0B;
+      --warning-light: #FEF3C7;
+      --danger: #EF4444;
+      --danger-light: #FEE2E2;
+      --pink: #EC4899;
+      --pink-light: #FCE7F3;
+      --bg: #F9FAFB;
+      --card: #FFFFFF;
+      --border: #E5E7EB;
+      --text: #1F2937;
+      --text-secondary: #6B7280;
+      --text-muted: #9CA3AF;
+    }
+    
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: #1F2937; line-height: 1.5; }
-    .header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: white; border-bottom: 1px solid #E5E7EB; position: sticky; top: 0; z-index: 100; }
-    .view-toggle { display: flex; background: #F3F4F6; padding: 4px; border-radius: 12px; }
-    .view-toggle button { padding: 8px 20px; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; background: transparent; transition: 0.2s; font-size: 13px; }
-    .view-toggle button.active { background: white; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    .main { max-width: 1000px; margin: 0 auto; padding: 20px; }
-    .period-nav { display: flex; justify-content: center; align-items: center; gap: 20px; margin-bottom: 24px; background: white; padding: 16px; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
-    .nav-btn { width: 36px; height: 36px; border: 1px solid #E5E7EB; background: white; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
-    .current-period { font-weight: 800; font-size: 18px; color: var(--primary); min-width: 120px; text-align: center; }
-    .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 30px; }
-    .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .card { background: white; padding: 20px; border-radius: 24px; border: 1px solid #E5E7EB; }
-    .card-label { font-size: 11px; color: #6B7280; display: block; margin-bottom: 4px; }
-    .card-value { font-size: 18px; font-weight: 800; color: #111827; }
-    .chart-card { background: white; padding: 24px; border-radius: 24px; border: 1px solid #E5E7EB; display: flex; flex-direction: column; align-items: center; }
-    #categoryChart { max-width: 160px !important; max-height: 160px !important; }
-    .chart-legend { width: 100%; margin-top: 15px; font-size: 12px; }
-    .legend-item { display: flex; justify-content: space-between; padding: 6
+    body { 
+      font-family: 'Noto Sans KR', -apple-system, sans-serif; 
+      background: var(--bg); 
+      color: var(--text); 
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+    
+    /* 헤더 */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 800;
+      font-size: 16px;
+    }
+    .logo-text {
+      font-weight: 800;
+      font-size: 18px;
+      color: var(--text);
+    }
+    .header-badge {
+      font-size: 12px;
+      font-weight: 700;
+      background: var(--primary-light);
+      color: var(--primary);
+      padding: 6px 12px;
+      border-radius: 20px;
+    }
+    
+    /* 메인 */
+    .main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    /* 뷰 토글 & 기간 선택 */
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .view-toggle {
+      display: flex;
+      background: var(--card);
+      border-radius: 12px;
+      padding: 4px;
+      border: 1px solid var(--border);
+    }
+    .view-btn {
+      padding: 10px 20px;
+      border: none;
+      background: transparent;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .view-btn.active {
+      background: var(--primary);
+      color: white;
+    }
+    .period-nav {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--card);
+      padding: 8px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+    .nav-btn {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: var(--bg);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    .nav-btn:hover:not(:disabled) { background: var(--primary-light); }
+    .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .period-text {
+      font-size: 16px;
+      font-weight: 700;
+      min-width: 100px;
+      text-align: center;
+    }
+    
+    /* 대시보드 카드 */
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--card);
+      padding: 20px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+    }
+    .stat-card.blue::before { background: var(--primary); }
+    .stat-card.green::before { background: var(--success); }
+    .stat-card.yellow::before { background: var(--warning); }
+    .stat-card.pink::before { background: var(--pink); }
+    .stat-card.clickable { cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+    .stat-card.clickable:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .stat-value {
+      font-size: 22px;
+      font-weight: 800;
+    }
+    .stat-card.green .stat-value { color: var(--success); }
+    .stat-card.yellow .stat-value { color: var(--warning); }
+    .stat-card.pink .stat-value { color: var(--pink); }
+    .stat-hint {
+      font-size: 11px;
+      color: var(--warning);
+      margin-top: 4px;
+    }
+    
+    /* 차트 섹션 */
+    .chart-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .chart-card {
+      background: var(--card);
+      padding: 20px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+    }
+    .chart-title {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .chart-wrapper {
+      position: relative;
+      height: 200px;
+    }
+    
+    /* 입력 섹션 */
+    .input-section {
+      background: var(--card);
+      border-radius: 20px;
+      padding: 24px;
+      border: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+    .input-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .input-icon {
+      width: 44px;
+      height: 44px;
+      background: var(--primary-light);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+    .input-title {
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .input-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid var(--bg);
+      padding-bottom: 12px;
+    }
+    .tab {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      background: transparent;
+    }
+    .tab.active {
+      background: var(--primary);
+      color: white;
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      font-size: 14px;
+      resize: none;
+      margin-bottom: 12px;
+      font-family: inherit;
+    }
+    textarea:focus { outline: none; border-color: var(--primary); }
+    
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.full { grid-column: span 2; }
+    .form-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+    .form-input, .form-select {
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      font-size: 14px;
+      font-family: inherit;
+    }
+    .form-input:focus, .form-select:focus { outline: none; border-color: var(--primary); }
+    
+    .btn {
+      padding: 14px 24px;
+      border-radius: 12px;
+      border: none;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%);
+      color: white;
+      width: 100%;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4); }
+    .btn-secondary {
+      background: var(--bg);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+    
+    /* 파싱 결과 */
+    .parse-result {
+      background: var(--success-light);
+      border: 1px solid #A7F3D0;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .parse-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--success);
+      margin-bottom: 12px;
+    }
+    .parse-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px dashed #A7F3D0;
+      font-size: 13px;
+    }
+    .parse-item:last-child { border-bottom: none; }
+    .parse-amount { font-weight: 700; color: var(--success); }
+    .parse-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .parse-actions .btn { flex: 1; padding: 10px; }
+    
+    /* 거래 내역 */
+    .tx-section {
+      background: var(--card);
+      border-radius: 20px;
+      padding: 24px;
+      border: 1px solid var(--border);
+    }
+    .tx-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .tx-title {
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .tx-subtitle {
+      font-size: 12px;
+      color: var(--primary);
+    }
+    .filter-badge {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: var(--primary-light);
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--primary);
+    }
+    .filter-badge.active { display: flex; }
+    .filter-clear {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    .tx-list { display: flex; flex-direction: column; gap: 8px; }
+    .tx-item {
+      padding: 16px;
+      border-radius: 14px;
+      background: var(--bg);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tx-item:hover { border-color: var(--border); }
+    .tx-item.expanded { background: white; border-color: var(--primary); }
+    .tx-main {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .tx-date {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      background: white;
+      padding: 6px 10px;
+      border-radius: 8px;
+      min-width: 50px;
+      text-align: center;
+    }
+    .tx-info { flex: 1; min-width: 0; }
+    .tx-store {
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .tx-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .tx-amount {
+      font-size: 15px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .tx-amount.giftcard { color: var(--warning); }
+    
+    .tag {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+    .tag-food { background: #FFEDD5; color: #EA580C; }
+    .tag-shopping { background: #E0E7FF; color: #4F46E5; }
+    .tag-giftcard { background: var(--warning-light); color: #D97706; }
+    .tag-transport { background: #D1FAE5; color: #059669; }
+    .tag-leisure { background: var(--pink-light); color: #DB2777; }
+    .tag-medical { background: var(--danger-light); color: var(--danger); }
+    .tag-utility { background: #DBEAFE; color: #2563EB; }
+    .tag-education { background: #EDE9FE; color: #7C3AED; }
+    .tag-etc { background: #F3F4F6; color: #4B5563; }
+    .tag-split { background: #DBEAFE; color: #2563EB; }
+    
+    /* 정산 패널 */
+    .split-panel {
+      display: none;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px dashed var(--border);
+    }
+    .tx-item.expanded .split-panel { display: block; }
+    .split-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+    .split-members { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+    .split-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: white;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+    .split-check { width: 18px; height: 18px; accent-color: var(--primary); }
+    .split-name { font-size: 14px; font-weight: 500; min-width: 50px; }
+    .split-name.me { color: var(--success); }
+    .split-name.family { color: var(--pink); }
+    .split-input {
+      flex: 1;
+      max-width: 100px;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      text-align: right;
+      font-size: 14px;
+    }
+    .split-input:disabled { background: var(--bg); color: var(--text-muted); }
+    .split-suffix { font-size: 12px; color: var(--text-muted); }
+    .split-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .split-btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+    }
+    .split-btn.equal { background: var(--bg); color: var(--text-secondary); }
+    .split-btn.save { background: var(--primary); color: white; }
+    .split-error {
+      margin-top: 8px;
+      padding: 8px 12px;
+      background: var(--danger-light);
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--danger);
+    }
+    .split-summary {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 12px;
+      padding: 12px;
+      background: var(--success-light);
+      border-radius: 10px;
+    }
+    .split-summary-label { font-size: 13px; font-weight: 600; color: var(--success); }
+    .split-summary-value { font-size: 16px; font-weight: 800; color: var(--success); }
+    
+    .no-data {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-muted);
+    }
+    
+    /* 모달 */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s;
+    }
+    .modal-overlay.active { opacity: 1; visibility: visible; }
+    .modal {
+      background: white;
+      border-radius: 24px;
+      width: 100%;
+      max-width: 480px;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transform: translateY(20px);
+      transition: transform 0.3s;
+    }
+    .modal-overlay.active .modal { transform: translateY(0); }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-title { font-size: 18px; font-weight: 700; }
+    .modal-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: none;
+      background: var(--bg);
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .modal-body { padding: 24px; overflow-y: auto; flex: 1; }
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      background: var(--bg);
+    }
+    
+    .mile-section { margin-bottom: 20px; }
+    .mile-title { font-size: 14px; font-weight: 700; margin-bottom: 12px; }
+    .mile-info-box {
+      background: linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .mile-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .mile-row:last-child { margin-bottom: 0; }
+    .mile-label { font-size: 13px; color: #1E40AF; }
+    .mile-value { font-size: 14px; font-weight: 700; color: #1E40AF; }
+    .mile-input-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .mile-input-group { flex: 1; }
+    .mile-input-group label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+    .mile-input-wrapper {
+      display: flex;
+      align-items: center;
+      background: var(--bg);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .mile-input {
+      flex: 1;
+      padding: 10px 12px;
+      border: none;
+      background: transparent;
+      text-align: right;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .mile-input:focus { outline: none; }
+    .mile-suffix {
+      padding: 10px 12px;
+      background: #F3F4F6;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .mile-result {
+      background: linear-gradient(135deg, var(--warning-light) 0%, #FDE68A 100%);
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+    .mile-result .mile-row { color: #92400E; }
+    .mile-result .mile-label { color: #92400E; }
+    .mile-result .mile-value { color: #92400E; }
+    .mile-result .mile-value.highlight {
+      font-size: 20px;
+      font-weight: 800;
+      color: #D97706;
+    }
+    .mile-result .mile-row.total {
+      padding-top: 12px;
+      margin-top: 8px;
+      border-top: 1px dashed #F59E0B;
+    }
+    .formula-box {
+      background: #F0F9FF;
+      border: 1px solid #BAE6FD;
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 12px;
+      color: #0369A1;
+      margin: 12px 0;
+    }
+    .formula-box code {
+      background: #E0F2FE;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    
+    /* 연간 뷰 */
+    .yearly-view { display: none; }
+    .yearly-view.active { display: block; }
+    .monthly-view.hidden { display: none; }
+    
+    .monthly-bars { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+    .month-bar-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .month-bar-item:hover { background: var(--bg); }
+    .month-bar-label { min-width: 40px; font-size: 14px; font-weight: 600; }
+    .month-bar-track {
+      flex: 1;
+      height: 20px;
+      background: var(--bg);
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+    .month-bar-fill {
+      height: 100%;
+      border-radius: 6px;
+      transition: width 0.5s;
+    }
+    .month-bar-fill.living { background: linear-gradient(90deg, var(--primary) 0%, #8B5CF6 100%); }
+    .month-bar-value { min-width: 70px; text-align: right; font-size: 14px; font-weight: 700; }
+    
+    .avg-card {
+      background: linear-gradient(135deg, #EDE9FE 0%, #DDD6FE 100%);
+      border-radius: 16px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    .avg-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .avg-row:last-child { margin-bottom: 0; }
+    .avg-label { font-size: 13px; color: #5B21B6; }
+    .avg-value { font-size: 14px; font-weight: 700; color: #5B21B6; }
+    .avg-value.highlight { font-size: 18px; font-weight: 800; color: #7C3AED; }
+    
+    /* FAB */
+    .fab {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%);
+      border: none;
+      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      color: white;
+      z-index: 99;
+    }
+    
+    @media (max-width: 640px) {
+      .main { padding: 16px; }
+      .controls { flex-direction: column; align-items: stretch; }
+      .period-nav { justify-content: center; }
+      .dashboard { grid-template-columns: repeat(2, 1fr); }
+      .chart-section { grid-template-columns: 1fr; }
+      .form-grid { grid-template-columns: 1fr; }
+      .form-group.full { grid-column: span 1; }
+      .tx-main { flex-wrap: wrap; }
+      .tx-amount { width: 100%; text-align: right; margin-top: 8px; }
+      .mile-input-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon">S</div>
+      <span class="logo-text">Smart Ledger</span>
+    </div>
+    <div class="header-badge">2026 Edition</div>
+  </header>
+
+  <main class="main">
+    <!-- 컨트롤 -->
+    <div class="controls">
+      <div class="view-toggle">
+        <button class="view-btn active" id="btnMonthly" onclick="switchView('monthly')">📅 월간</button>
+        <button class="view-btn" id="btnYearly" onclick="switchView('yearly')">📊 연간</button>
+      </div>
+      <div class="period-nav">
+        <button class="nav-btn" id="prevBtn" onclick="navigate(-1)">◀</button>
+        <span class="period-text" id="periodText">2026년 1월</span>
+        <button class="nav-btn" id="nextBtn" onclick="navigate(1)">▶</button>
+      </div>
+    </div>
+
+    <!-- 월간 뷰 -->
+    <div class="monthly-view" id="monthlyView">
+      <!-- 대시보드 -->
+      <div class="dashboard">
+        <div class="stat-card blue">
+          <span class="stat-label">📋 총 지출</span>
+          <span class="stat-value" id="totalAmt">0원</span>
+        </div>
+        <div class="stat-card green">
+          <span class="stat-label">💰 내 실제 지출</span>
+          <span class="stat-value" id="myAmt">0원</span>
+        </div>
+        <div class="stat-card pink">
+          <span class="stat-label">👨‍👩‍👧 가족 지출</span>
+          <span class="stat-value" id="familyAmt">0원</span>
+        </div>
+        <div class="stat-card yellow clickable" onclick="openMileModal()">
+          <span class="stat-label">🎁 상품권</span>
+          <span class="stat-value" id="giftAmt">0원</span>
+          <span class="stat-hint">👆 마일단가 계산</span>
+        </div>
+      </div>
+
+      <!-- 차트 -->
+      <div class="chart-section">
+        <div class="chart-card">
+          <div class="chart-title">📊 카테고리별 지출</div>
+          <div class="chart-wrapper"><canvas id="categoryChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">📈 최근 3개월 추이</div>
+          <div class="chart-wrapper"><canvas id="trendChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- 입력 -->
+      <div class="input-section">
+        <div class="input-header">
+          <div class="input-icon">💬</div>
+          <div>
+            <div class="input-title">지출 입력</div>
+            <div class="input-desc">카드 문자를 붙여넣거나 직접 입력하세요</div>
+          </div>
+        </div>
+        <div class="tabs">
+          <button class="tab active" onclick="setTab('quick')">⚡ 빠른 입력</button>
+          <button class="tab" onclick="setTab('manual')">✏️ 직접 입력</button>
+        </div>
+        <div class="tab-content active" id="tabQuick">
+          <textarea id="quickInput" placeholder="예시:
+[신한카드] 45,000원 스타벅스 강남점 01/23 10:30
+[삼성카드] 128,000원 쿠팡 01/22
+네이버페이 32,000원 CGV 01/21"></textarea>
+          <div id="parseResult"></div>
+          <button class="btn btn-primary" onclick="parseQuickInput()">⚡ 자동 인식</button>
+        </div>
+        <div class="tab-content" id="tabManual">
+          <div class="form-grid">
+            <div class="form-group full">
+              <label class="form-label">가맹점명 *</label>
+              <input type="text" class="form-input" id="mStore" placeholder="예: 스타벅스 강남점">
+            </div>
+            <div class="form-group">
+              <label class="form-label">금액 *</label>
+              <input type="number" class="form-input" id="mAmount" placeholder="0">
+            </div>
+            <div class="form-group">
+              <label class="form-label">날짜</label>
+              <input type="date" class="form-input" id="mDate">
+            </div>
+            <div class="form-group">
+              <label class="form-label">결제수단</label>
+              <select class="form-select" id="mCard">
+                <option>신한카드</option>
+                <option>삼성카드</option>
+                <option>현대카드</option>
+                <option>KB국민카드</option>
+                <option>롯데카드</option>
+                <option>네이버페이</option>
+                <option>카카오페이</option>
+                <option>현금</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">카테고리</label>
+              <select class="form-select" id="mCategory">
+                <option value="food">🍽️ 식비</option>
+                <option value="shopping">🛒 쇼핑</option>
+                <option value="transport">🚗 교통</option>
+                <option value="leisure">🎬 여가</option>
+                <option value="medical">🏥 의료</option>
+                <option value="utility">💡 공과금</option>
+                <option value="education">📚 교육</option>
+                <option value="giftcard">🎁 상품권</option>
+                <option value="etc">📦 기타</option>
+              </select>
+            </div>
+            <div class="form-group full">
+              <button class="btn btn-primary" onclick="addManual()">저장하기</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 거래 내역 -->
+      <div class="tx-section">
+        <div class="tx-header">
+          <div>
+            <div class="tx-title">거래 내역</div>
+            <div class="tx-subtitle">💡 클릭하면 정산 설정 가능</div>
+          </div>
+          <div class="filter-badge" id="filterBadge">
+            <span id="filterText"></span>
+            <button class="filter-clear" onclick="clearFilter()">✕</button>
+          </div>
+        </div>
+        <div class="tx-list" id="txList"></div>
+      </div>
+    </div>
+
+    <!-- 연간 뷰 -->
+    <div class="yearly-view" id="yearlyView">
+      <div class="dashboard">
+        <div class="stat-card blue">
+          <span class="stat-label">📋 연간 총 지출</span>
+          <span class="stat-value" id="yTotalAmt">0원</span>
+        </div>
+        <div class="stat-card green">
+          <span class="stat-label">💰 내 연간 지출</span>
+          <span class="stat-value" id="yMyAmt">0원</span>
+        </div>
+        <div class="stat-card yellow clickable" onclick="openYearlyMileModal()">
+          <span class="stat-label">🎁 연간 상품권</span>
+          <span class="stat-value" id="yGiftAmt">0원</span>
+          <span class="stat-hint">👆 연간 마일단가</span>
+        </div>
+      </div>
+
+      <div class="chart-section">
+        <div class="chart-card">
+          <div class="chart-title">📊 연간 카테고리별</div>
+          <div class="chart-wrapper"><canvas id="yearlyCatChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">📈 월별 지출 추이</div>
+          <div class="chart-wrapper"><canvas id="yearlyBarChart"></canvas></div>
+        </div>
+      </div>
+
+      <div class="tx-section">
+        <div class="tx-title" style="margin-bottom:8px">📊 월별 상세 (클릭시 이동)</div>
+        <div class="monthly-bars" id="monthlyBars"></div>
+        <div class="avg-card">
+          <div class="avg-row"><span class="avg-label">월평균 총 지출</span><span class="avg-value" id="avgTotal">0원</span></div>
+          <div class="avg-row"><span class="avg-label">월평균 생활비</span><span class="avg-value" id="avgLiving">0원</span></div>
+          <div class="avg-row"><span class="avg-label">월평균 내 지출</span><span class="avg-value highlight" id="avgMy">0원</span></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <button class="fab" id="fab" onclick="openManualTab()">+</button>
+
+  <!-- 월간 마일 모달 -->
+  <div class="modal-overlay" id="mileModal" onclick="closeMileModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">✈️ 마일단가 계산기</div>
+        <button class="modal-close" onclick="closeMileModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="mile-section">
+          <div class="mile-title">📊 이번 달 상품권</div>
+          <div class="mile-info-box">
+            <div class="mile-row">
+              <span class="mile-label">상품권 구매액</span>
+              <span class="mile-value" id="mileGiftTotal">0원</span>
+            </div>
+          </div>
+        </div>
+        <div class="mile-section">
+          <div class="mile-title">💵 현금화 및 카드 정보</div>
+          <div class="mile-input-row">
+            <div class="mile-input-group">
+              <label>현금화 금액</label>
+              <div class="mile-input-wrapper">
+                <input type="number" class="mile-input" id="mileCash" oninput="calcMile()">
+                <span class="mile-suffix">원</span>
+              </div>
+            </div>
+          </div>
+          <div class="mile-input-row">
+            <div class="mile-input-group">
+              <label>카드 연회비</label>
+              <div class="mile-input-wrapper">
+                <input type="number" class="mile-input" id="mileFee" oninput="calcMile()">
+                <span class="mile-suffix">원</span>
+              </div>
+            </div>
+            <div class="mile-input-group">
+              <label>카드 혜택</label>
+              <div class="mile-input-wrapper">
+                <input type="number" class="mile-input" id="mileBenefit" oninput="calcMile()">
+                <span class="mile-suffix">원</span>
+              </div>
+            </div>
+          </div>
+          <div class="mile-input-row">
+            <div class="mile-input-group">
+              <label>획득 마일리지</label>
+              <div class="mile-input-wrapper">
+                <input type="number" class="mile-input" id="mileMile" oninput="calcMile()">
+                <span class="mile-suffix">마일</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="formula-box">
+          <strong>📐 계산 공식:</strong><br>
+          <code>(상품권 - 현금화 + 연회비 - 혜택) ÷ 마일</code>
+        </div>
+        <div class="mile-result">
+          <div class="mile-row"><span class="mile-label">상품권 구매</span><span class="mile-value" id="rPurchase">0원</span></div>
+          <div class="mile-row"><span class="mile-label">(-) 현금화</span><span class="mile-value" id="rCash">0원</span></div>
+          <div class="mile-row"><span class="mile-label">(+) 연회비</span><span class="mile-value" id="rFee">0원</span></div>
+          <div class="mile-row"><span class="mile-label">(-) 혜택</span><span class="mile-value" id="rBenefit">0원</span></div>
+          <div class="mile-row"><span class="mile-label">= 실제 비용</span><span class="mile-value" id="rActual">0원</span></div>
+          <div class="mile-row total">
+            <span class="mile-label">🎯 마일당 단가</span>
+            <span class="mile-value highlight" id="rPerMile">- 원/마일</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="closeMileModal()">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 연간 마일 모달 -->
+  <div class="modal-overlay" id="yearlyMileModal" onclick="closeYearlyMileModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title" id="yMileTitle">✈️ 2026년 연간 마일단가</div>
+        <button class="modal-close" onclick="closeYearlyMileModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="mile-section">
+          <div class="mile-title">📊 연간 누계</div>
+          <div class="mile-info-box">
+            <div class="mile-row"><span class="mile-label">상품권 총액</span><span class="mile-value" id="yMileGift">0원</span></div>
+            <div class="mile-row"><span class="mile-label">현금화 누계</span><span class="mile-value" id="yMileCash">0원</span></div>
+            <div class="mile-row"><span class="mile-label">마일 누계</span><span class="mile-value" id="yMileMile">0 마일</span></div>
+          </div>
+        </div>
+        <div class="mile-section">
+          <div class="mile-title">💳 연간 카드 비용</div>
+          <div class="mile-input-row">
+            <div class="mile-input-group">
+              <label>연회비 합계</label>
+              <div class="mile-input-wrapper">
+                <input type="number" class="mile-input" id="yFee" oninput="calcYearlyMile()">
+                <span class="mile-suffix">원</span>
+              </div>
+            </div>
+            <div class="mile-input-group">
+              <label>혜택 합계</label>
+              <div class="mile-input-wrapper">
+                <input type="number" class="mile-input" id="yBenefit" oninput="calcYearlyMile()">
+                <span class="mile-suffix">원</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="mile-result">
+          <div class="mile-row"><span class="mile-label">연간 상품권</span><span class="mile-value" id="yrPurchase">0원</span></div>
+          <div class="mile-row"><span class="mile-label">(-) 현금화</span><span class="mile-value" id="yrCash">0원</span></div>
+          <div class="mile-row"><span class="mile-label">(+) 연회비</span><span class="mile-value" id="yrFee">0원</span></div>
+          <div class="mile-row"><span class="mile-label">(-) 혜택</span><span class="mile-value" id="yrBenefit">0원</span></div>
+          <div class="mile-row"><span class="mile-label">= 실제 비용</span><span class="mile-value" id="yrActual">0원</span></div>
+          <div class="mile-row total">
+            <span class="mile-label">🎯 연간 마일단가</span>
+            <span class="mile-value highlight" id="yrPerMile">- 원/마일</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="closeYearlyMileModal()">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== 상수 =====
+    const START_YEAR = 2026;
+    const STORAGE_KEY = 'smartLedgerPro_v1';
+    const MEMBERS = [
+      { id: 'me', name: '나', isMe: true, isFamily: false },
+      { id: 'mom', name: '엄마', isMe: false, isFamily: true },
+      { id: 'dad', name: '아빠', isMe: false, isFamily: true },
+      { id: 'sibling', name: '동생', isMe: false, isFamily: true },
+      { id: 'friend', name: '친구', isMe: false, isFamily: false }
+    ];
+    const FAMILY_IDS = ['mom', 'dad', 'sibling'];
+    const CATEGORIES = {
+      food: { name: '식비', color: '#F97316' },
+      shopping: { name: '쇼핑', color: '#6366F1' },
+      transport: { name: '교통', color: '#10B981' },
+      leisure: { name: '여가', color: '#EC4899' },
+      medical: { name: '의료', color: '#EF4444' },
+      utility: { name: '공과금', color: '#3B82F6' },
+      education: { name: '교육', color: '#8B5CF6' },
+      giftcard: { name: '상품권', color: '#F59E0B' },
+      etc: { name: '기타', color: '#6B7280' }
+    };
+
+    // ===== 상태 =====
+    let state = {
+      year: START_YEAR,
+      month: 1,
+      view: 'monthly',
+      filter: null,
+      expandedId: null,
+      data: {},           // 월별 거래
+      mileData: {},       // 월별 마일 입력
+      yearlyMileData: {}, // 연간 마일 입력
+      charts: {}
+    };
+
+    // ===== 유틸 =====
+    const key = (y, m) => `${y}-${String(m).padStart(2, '0')}`;
+    const fmt = n => n.toLocaleString('ko-KR');
+    const fmtShort = n => n >= 10000 ? Math.round(n/10000) + '만' : fmt(n);
+    const uid = () => Date.now().toString(36) + Math.random().toString(36).substr(2);
+
+    // ===== 저장/불러오기 =====
+    function save() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        data: state.data,
+        mileData: state.mileData,
+        yearlyMileData: state.yearlyMileData
+      }));
+    }
+
+    function load() {
+      try {
+        const s = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (s) {
+          state.data = s.data || {};
+          state.mileData = s.mileData || {};
+          state.yearlyMileData = s.yearlyMileData || {};
+        }
+      } catch(e) { console.error(e); }
+      
+      // 샘플 데이터
+      if (Object.keys(state.data).length === 0) {
+        state.data['2026-01'] = [
+          { id: uid(), date: '01/23', store: '스타벅스 강남점', card: '신한카드', cat: 'food', amt: 45000, split: { members: { me: 45000 } } },
+          { id: uid(), date: '01/22', store: '쿠팡', card: '삼성카드', cat: 'shopping', amt: 128000, split: { members: { me: 64000, mom: 64000 } } },
+          { id: uid(), date: '01/21', store: '신세계상품권', card: '현대카드', cat: 'giftcard', amt: 500000, split: { members: { me: 500000 } } },
+          { id: uid(), date: '01/20', store: 'CGV 영등포', card: 'KB국민카드', cat: 'leisure', amt: 32000, split: { members: { me: 16000, sibling: 16000 } } },
+          { id: uid(), date: '01/19', store: '롯데상품권', card: '롯데카드', cat: 'giftcard', amt: 1000000, split: { members: { me: 1000000 } } }
+        ];
+        save();
+      }
+    }
+
+    // ===== 초기화 =====
+    document.addEventListener('DOMContentLoaded', () => {
+      load();
+      const today = new Date();
+      if (today.getFullYear() >= START_YEAR) {
+        state.year = today.getFullYear();
+        state.month = today.getMonth() + 1;
+      }
+      document.getElementById('mDate').value = today.toISOString().split('T')[0];
+      render();
+    });
+
+    // ===== 뷰 전환 =====
+    function switchView(v) {
+      state.view = v;
+      state.filter = null;
+      document.getElementById('btnMonthly').classList.toggle('active', v === 'monthly');
+      document.getElementById('btnYearly').classList.toggle('active', v === 'yearly');
+      document.getElementById('monthlyView').classList.toggle('hidden', v !== 'monthly');
+      document.getElementById('yearlyView').classList.toggle('active', v === 'yearly');
+      document.getElementById('fab').style.display = v === 'monthly' ? 'flex' : 'none';
+      render();
+    }
+
+    // ===== 기간 이동 =====
+    function navigate(delta) {
+      if (state.view === 'monthly') {
+        let m = state.month + delta, y = state.year;
+        if (m > 12) { m = 1; y++; }
+        if (m < 1) { m = 12; y--; }
+        if (y < START_YEAR || (y === START_YEAR && m < 1)) return;
+        state.month = m; state.year = y;
+      } else {
+        const y = state.year + delta;
+        if (y < START_YEAR) return;
+        state.year = y;
+      }
+      render();
+    }
+
+    function updateNav() {
+      const txt = state.view === 'monthly' 
+        ? `${state.year}년 ${state.month}월`
+        : `${state.year}년`;
+      document.getElementById('periodText').textContent = txt;
+      
+      const canPrev = state.view === 'monthly'
+        ? !(state.year === START_YEAR && state.month === 1)
+        : state.year > START_YEAR;
+      document.getElementById('prevBtn').disabled = !canPrev;
+    }
+
+    // ===== 메인 렌더 =====
+    function render() {
+      updateNav();
+      if (state.view === 'monthly') renderMonthly();
+      else renderYearly();
+    }
+
+    function getTx() {
+      return state.data[key(state.year, state.month)] || [];
+    }
+
+    function renderMonthly() {
+      const tx = getTx();
+      let total = 0, myTotal = 0, familyTotal = 0, giftTotal = 0;
+      const catTotals = {};
+
+      tx.forEach(t => {
+        total += t.amt;
+        if (t.cat === 'giftcard') giftTotal += t.amt;
+        else catTotals[t.cat] = (catTotals[t.cat] || 0) + t.amt;
+        
+        if (t.split?.members) {
+          myTotal += t.split.members.me || 0;
+          FAMILY_IDS.forEach(id => { familyTotal += t.split.members[id] || 0; });
+        }
+      });
+
+      document.getElementById('totalAmt').textContent = fmtShort(total) + '원';
+      document.getElementById('myAmt').textContent = fmtShort(myTotal) + '원';
+      document.getElementById('familyAmt').textContent = fmtShort(familyTotal) + '원';
+      document.getElementById('giftAmt').textContent = fmtShort(giftTotal) + '원';
+
+      renderCategoryChart(catTotals);
+      renderTrendChart();
+      renderTxList(tx);
+    }
+
+    function renderCategoryChart(data) {
+      const ctx = document.getElementById('categoryChart');
+      if (state.charts.category) state.charts.category.destroy();
+      
+      const cats = Object.keys(data).filter(k => data[k] > 0);
+      if (cats.length === 0) {
+        state.charts.category = new Chart(ctx, {
+          type: 'doughnut',
+          data: { labels: ['데이터 없음'], datasets: [{ data: [1], backgroundColor: ['#E5E7EB'] }] },
+          options: { cutout: '65%', plugins: { legend: { display: false } } }
+        });
+        return;
+      }
+
+      state.charts.category = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: cats.map(c => CATEGORIES[c]?.name || c),
+          datasets: [{
+            data: cats.map(c => data[c]),
+            backgroundColor: cats.map(c => CATEGORIES[c]?.color || '#6B7280')
+          }]
+        },
+        options: {
+          cutout: '65%',
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 8, font: { size: 11 } } } },
+          onClick: (e, el) => {
+            if (el.length) {
+              state.filter = cats[el[0].index];
+              document.getElementById('filterBadge').classList.add('active');
+              document.getElementById('filterText').textContent = CATEGORIES[state.filter]?.name + ' 필터';
+              renderTxList(getTx());
+            }
+          }
+        }
+      });
+    }
+
+    function renderTrendChart() {
+      const ctx = document.getElementById('trendChart');
+      if (state.charts.trend) state.charts.trend.destroy();
+
+      const months = [];
+      for (let i = 2; i >= 0; i--) {
+        let m = state.month - i, y = state.year;
+        if (m < 1) { m += 12; y--; }
+        if (y < START_YEAR) { months.push({ label: '', living: 0, gift: 0 }); continue; }
+        
+        const tx = state.data[key(y, m)] || [];
+        let living = 0, gift = 0;
+        tx.forEach(t => { if (t.cat === 'giftcard') gift += t.amt; else living += t.amt; });
+        months.push({ label: m + '월', living, gift });
+      }
+
+      state.charts.trend = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: months.map(m => m.label),
+          datasets: [
+            { label: '생활비', data: months.map(m => m.living), backgroundColor: '#6366F1', borderRadius: 6 },
+            { label: '상품권', data: months.map(m => m.gift), backgroundColor: '#F59E0B', borderRadius: 6 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 8, font: { size: 11 } } } },
+          scales: { y: { beginAtZero: true, ticks: { callback: v => fmtShort(v) } } }
+        }
+      });
+    }
+
+    function renderTxList(tx) {
+      const list = document.getElementById('txList');
+      const filtered = state.filter ? tx.filter(t => t.cat === state.filter) : tx;
+      
+      if (filtered.length === 0) {
+        list.innerHTML = '<div class="no-data">거래 내역이 없습니다</div>';
+        return;
+      }
+
+      list.innerHTML = filtered.map(t => {
+        const cat = CATEGORIES[t.cat] || CATEGORIES.etc;
+        const isGift = t.cat === 'giftcard';
+        const expanded = state.expandedId === t.id;
+        const myShare = t.split?.members?.me || t.amt;
+        const memberCount = t.split?.members ? Object.keys(t.split.members).length : 1;
+        const hasSplit = memberCount > 1;
+
+        return `
+          <div class="tx-item ${expanded ? 'expanded' : ''}" onclick="toggleExpand('${t.id}')">
+            <div class="tx-main">
+              <div class="tx-date">${t.date}</div>
+              <div class="tx-info">
+                <div class="tx-store">
+                  <span class="tag tag-${t.cat}">${cat.name}</span>
+                  ${t.store}
+                  ${hasSplit ? `<span class="tag tag-split">👥 ${memberCount}명</span>` : ''}
+                </div>
+                <div class="tx-meta">${t.card}${hasSplit ? ' • 내 부담: ' + fmt(myShare) + '원' : ''}</div>
+              </div>
+              <div class="tx-amount ${isGift ? 'giftcard' : ''}">${fmt(t.amt)}원</div>
+            </div>
+            <div class="split-panel" onclick="event.stopPropagation()">
+              <div class="split-title">👥 정산 설정</div>
+              <div class="split-members">${renderSplitMembers(t)}</div>
+              <div id="splitErr_${t.id}"></div>
+              <div class="split-actions">
+                <button class="split-btn equal" onclick="equalSplit('${t.id}')">1/N 균등</button>
+                <button class="split-btn save" onclick="saveSplit('${t.id}')">저장</button>
+              </div>
+              <div class="split-summary">
+                <span class="split-summary-label">💰 내 실제 부담</span>
+                <span class="split-summary-value" id="mySum_${t.id}">${fmt(myShare)}원</span>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function renderSplitMembers(t) {
+      return MEMBERS.map(m => {
+        const checked = t.split?.members?.hasOwnProperty(m.id);
+        const amt = checked ? (t.split.members[m.id] || 0) : 0;
+        return `
+          <div class="split-row">
+            <input type="checkbox" class="split-check" ${checked ? 'checked' : ''} 
+              onchange="toggleMember('${t.id}','${m.id}',this.checked)">
+            <span class="split-name ${m.isMe ? 'me' : ''} ${m.isFamily ? 'family' : ''}">${m.name}</span>
+            <input type="number" class="split-input" id="sp_${t.id}_${m.id}" 
+              value="${checked ? amt : ''}" ${!checked ? 'disabled' : ''}
+              oninput="updateSplitAmt('${t.id}','${m.id}',this.value)">
+            <span class="split-suffix">원</span>
+          </div>`;
+      }).join('');
+    }
+
+    function toggleExpand(id) {
+      state.expandedId = state.expandedId === id ? null : id;
+      renderTxList(getTx());
+    }
+
+    function toggleMember(tid, mid, checked) {
+      const tx = getTx().find(t => t.id === tid);
+      if (!tx) return;
+      if (!tx.split) tx.split = { members: {} };
+      if (!tx.split.members) tx.split.members = {};
+
+      if (checked) {
+        tx.split.members[mid] = 0;
+        const cnt = Object.keys(tx.split.members).length;
+        const share = Math.floor(tx.amt / cnt);
+        const rem = tx.amt - share * cnt;
+        let i = 0;
+        for (const k in tx.split.members) {
+          tx.split.members[k] = share + (i++ === 0 ? rem : 0);
+        }
+      } else {
+        delete tx.split.members[mid];
+        const cnt = Object.keys(tx.split.members).length;
+        if (cnt > 0) {
+          const share = Math.floor(tx.amt / cnt);
+          const rem = tx.amt - share * cnt;
+          let i = 0;
+          for (const k in tx.split.members) {
+            tx.split.members[k] = share + (i++ === 0 ? rem : 0);
+          }
+        }
+      }
+
+      if (!tx.split.members.hasOwnProperty('me')) {
+        tx.split.members['me'] = tx.amt;
+      }
+
+      save();
+      renderTxList(getTx());
+      renderMonthly();
+    }
+
+    function updateSplitAmt(tid, mid, val) {
+      const tx = getTx().find(t => t.id === tid);
+      if (!tx?.split?.members) return;
+      
+      const v = Math.max(0, parseInt(val) || 0);
+      tx.split.members[mid] = v;
+
+      const total = Object.values(tx.split.members).reduce((a, b) => a + b, 0);
+      const errEl = document.getElementById(`splitErr_${tid}`);
+      
+      if (total !== tx.amt) {
+        const diff = tx.amt - total;
+        errEl.innerHTML = `<div class="split-error">⚠️ ${fmt(Math.abs(diff))}원 ${diff > 0 ? '부족' : '초과'}</div>`;
+      } else {
+        errEl.innerHTML = '';
+      }
+
+      document.getElementById(`mySum_${tid}`).textContent = fmt(tx.split.members.me || 0) + '원';
+    }
+
+    function equalSplit(tid) {
+      const tx = getTx().find(t => t.id === tid);
+      if (!tx?.split?.members) return;
+      
+      const keys = Object.keys(tx.split.members);
+      const share = Math.floor(tx.amt / keys.length);
+      const rem = tx.amt - share * keys.length;
+      keys.forEach((k, i) => { tx.split.members[k] = share + (i === 0 ? rem : 0); });
+      
+      save();
+      renderTxList(getTx());
+      renderMonthly();
+    }
+
+    function saveSplit(tid) {
+      const tx = getTx().find(t => t.id === tid);
+      if (!tx?.split?.members) return;
+      
+      const total = Object.values(tx.split.members).reduce((a, b) => a + b, 0);
+      if (total !== tx.amt) {
+        alert(`합계(${fmt(total)}원)가 총액(${fmt(tx.amt)}원)과 다릅니다.`);
+        return;
+      }
+      
+      save();
+      alert('저장되었습니다!');
+      state.expandedId = null;
+      renderTxList(getTx());
+      renderMonthly();
+    }
+
+    function clearFilter() {
+      state.filter = null;
+      document.getElementById('filterBadge').classList.remove('active');
+      renderTxList(getTx());
+    }
+
+    // ===== 탭 =====
+    function setTab(tab) {
+      document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === (tab === 'quick' ? 0 : 1)));
+      document.getElementById('tabQuick').classList.toggle('active', tab === 'quick');
+      document.getElementById('tabManual').classList.toggle('active', tab === 'manual');
+    }
+
+    function openManualTab() {
+      setTab('manual');
+      window.scrollTo({ top: document.querySelector('.input-section').offsetTop - 80, behavior: 'smooth' });
+    }
+
+    // ===== 빠른 입력 =====
+    let parsedTx = [];
+
+    function parseQuickInput() {
+      const text = document.getElementById('quickInput').value.trim();
+      if (!text) { alert('결제 문자를 입력하세요'); return; }
+
+      parsedTx = [];
+      text.split('\n').filter(l => l.trim()).forEach(line => {
+        const p = parseLine(line);
+        if (p) parsedTx.push(p);
+      });
+
+      if (parsedTx.length === 0) {
+        alert('인식된 내역이 없습니다');
+        return;
+      }
+
+      document.getElementById('parseResult').innerHTML = `
+        <div class="parse-result">
+          <div class="parse-title">✅ ${parsedTx.length}건 인식</div>
+          ${parsedTx.map(t => `
+            <div class="parse-item">
+              <span>${t.date} ${t.store} (${t.card})</span>
+              <span class="parse-amount">${fmt(t.amt)}원</span>
+            </div>`).join('')}
+          <div class="parse-actions">
+            <button class="btn btn-secondary" onclick="cancelParse()">취소</button>
+            <button class="btn btn-primary" onclick="confirmParse()">추가</button>
+          </div>
+        </div>`;
+    }
+
+    function parseLine(line) {
+      // 금액
+      let amt = 0;
+      const amtMatch = line.match(/([0-9,]+)\s*원/);
+      if (amtMatch) amt = parseInt(amtMatch[1].replace(/,/g, ''));
+      if (!amt) return null;
+
+      // 카드
+      let card = '카드';
+      const cardPatterns = [
+        [/신한/i, '신한카드'], [/삼성/i, '삼성카드'], [/현대/i, '현대카드'],
+        [/KB|국민/i, 'KB국민카드'], [/롯데/i, '롯데카드'], [/우리/i, '우리카드'],
+        [/하나/i, '하나카드'], [/네이버/i, '네이버페이'], [/카카오/i, '카카오페이']
+      ];
+      for (const [p, n] of cardPatterns) { if (p.test(line)) { card = n; break; } }
+
+      // 날짜
+      let date = '';
+      const dateMatch = line.match(/(\d{1,2})\/(\d{1,2})/);
+      if (dateMatch) date = dateMatch[1].padStart(2, '0') + '/' + dateMatch[2].padStart(2, '0');
+      else {
+        const today = new Date();
+        date = String(today.getMonth() + 1).padStart(2, '0') + '/' + String(today.getDate()).padStart(2, '0');
+      }
+
+      // 가맹점
+      let store = line
+        .replace(/\[.*?\]/g, '')
+        .replace(/([0-9,]+)\s*원/g, '')
+        .replace(/\d{1,2}\/\d{1,2}/g, '')
+        .replace(/\d{1,2}:\d{2}/g, '')
+        .replace(/결제|승인|취소|사용/g, '')
+        .trim();
+      if (store.length < 2) store = '기타 결제';
+
+      // 카테고리
+      let cat = 'etc';
+      const catPatterns = [
+        [/스타벅스|커피|카페|베이커리|식당|치킨|피자|배달|마트|편의점|GS25|CU|세븐/i, 'food'],
+        [/주유|충전|택시|버스|지하철|교통|KTX/i, 'transport'],
+        [/CGV|메가박스|영화|넷플릭스|게임|노래방/i, 'leisure'],
+        [/병원|약국|의료|치과/i, 'medical'],
+        [/학원|교육|강의/i, 'education'],
+        [/전기|가스|수도|통신/i, 'utility'],
+        [/상품권/i, 'giftcard'],
+        [/쿠팡|네이버|쇼핑|백화점|아울렛|마켓/i, 'shopping']
+      ];
+      for (const [p, c] of catPatterns) { if (p.test(line) || p.test(store)) { cat = c; break; } }
+
+      return { id: uid(), date, store, card, cat, amt, split: { members: { me: amt } } };
+    }
+
+    function confirmParse() {
+      const k = key(state.year, state.month);
+      if (!state.data[k]) state.data[k] = [];
+      parsedTx.forEach(t => state.data[k].unshift(t));
+      save();
+      
+      document.getElementById('quickInput').value = '';
+      document.getElementById('parseResult').innerHTML = '';
+      parsedTx = [];
+      render();
+    }
+
+    function cancelParse() {
+      parsedTx = [];
+      document.getElementById('parseResult').innerHTML = '';
+    }
+
+    // ===== 직접 입력 =====
+    function addManual() {
+      const store = document.getElementById('mStore').value.trim();
+      const amt = parseInt(document.getElementById('mAmount').value);
+      const dateVal = document.getElementById('mDate').value;
+      const card = document.getElementById('mCard').value;
+      const cat = document.getElementById('mCategory').value;
+
+      if (!store) { alert('가맹점명 입력'); return; }
+      if (!amt || amt <= 0) { alert('올바른 금액 입력'); return; }
+
+      const d = new Date(dateVal);
+      const y = d.getFullYear(), m = d.getMonth() + 1;
+      if (y < START_YEAR) { alert(`${START_YEAR}년 이전은 입력 불가`); return; }
+
+      const dateStr = String(m).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0');
+      const tx = { id: uid(), date: dateStr, store, card, cat, amt, split: { members: { me: amt } } };
+
+      const k = key(y, m);
+      if (!state.data[k]) state.data[k] = [];
+      state.data[k].unshift(tx);
+      save();
+
+      state.year = y;
+      state.month = m;
+      document.getElementById('mStore').value = '';
+      document.getElementById('mAmount').value = '';
+      render();
+    }
+
+    // ===== 연간 뷰 =====
+    function renderYearly() {
+      let yTotal = 0, yMy = 0, yGift = 0;
+      const monthlyStats = [];
+      const yCatTotals = {};
+
+      for (let m = 1; m <= 12; m++) {
+        const tx = state.data[key(state.year, m)] || [];
+        let total = 0, my = 0, gift = 0;
+        tx.forEach(t => {
+          total += t.amt;
+          if (t.cat === 'giftcard') gift += t.amt;
+          else yCatTotals[t.cat] = (yCatTotals[t.cat] || 0) + t.amt;
+          if (t.split?.members) my += t.split.members.me || 0;
+        });
+        monthlyStats.push({ m, total, my, gift });
+        yTotal += total; yMy += my; yGift += gift;
+      }
+
+      document.getElementById('yTotalAmt').textContent = fmtShort(yTotal) + '원';
+      document.getElementById('yMyAmt').textContent = fmtShort(yMy) + '원';
+      document.getElementById('yGiftAmt').textContent = fmtShort(yGift) + '원';
+
+      const withData = monthlyStats.filter(s => s.total > 0).length || 1;
+      const living = yTotal - yGift;
+      document.getElementById('avgTotal').textContent = fmtShort(Math.round(yTotal / withData)) + '원';
+      document.getElementById('avgLiving').textContent = fmtShort(Math.round(living / withData)) + '원';
+      document.getElementById('avgMy').textContent = fmtShort(Math.round(yMy / withData)) + '원';
+
+      renderYearlyCatChart(yCatTotals);
+      renderYearlyBarChart(monthlyStats);
+      renderMonthlyBars(monthlyStats);
+    }
+
+    function renderYearlyCatChart(data) {
+      const ctx = document.getElementById('yearlyCatChart');
+      if (state.charts.yearlyCat) state.charts.yearlyCat.destroy();
+
+      const cats = Object.keys(data).filter(k => data[k] > 0);
+      state.charts.yearlyCat = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: cats.length ? cats.map(c => CATEGORIES[c]?.name || c) : ['데이터 없음'],
+          datasets: [{
+            data: cats.length ? cats.map(c => data[c]) : [1],
+            backgroundColor: cats.length ? cats.map(c => CATEGORIES[c]?.color) : ['#E5E7EB']
+          }]
+        },
+        options: { cutout: '65%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } } }
+      });
+    }
+
+    function renderYearlyBarChart(stats) {
+      const ctx = document.getElementById('yearlyBarChart');
+      if (state.charts.yearlyBar) state.charts.yearlyBar.destroy();
+
+      state.charts.yearlyBar = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: stats.map(s => s.m + '월'),
+          datasets: [
+            { label: '생활비', data: stats.map(s => s.total - s.gift), backgroundColor: '#6366F1', borderRadius: 4 },
+            { label: '상품권', data: stats.map(s => s.gift), backgroundColor: '#F59E0B', borderRadius: 4 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } },
+          scales: { x: { stacked: true }, y: { stacked: true, ticks: { callback: v => fmtShort(v) } } }
+        }
+      });
+    }
+
+    function renderMonthlyBars(stats) {
+      const max = Math.max(...stats.map(s => s.total), 1);
+      document.getElementById('monthlyBars').innerHTML = stats.map(s => `
+        <div class="month-bar-item" onclick="goMonth(${s.m})">
+          <span class="month-bar-label">${s.m}월</span>
+          <div class="month-bar-track">
+            <div class="month-bar-fill living" style="width:${(s.total/max)*100}%"></div>
+          </div>
+          <span class="month-bar-value">${s.total ? fmtShort(s.total) + '원' : '-'}</span>
+        </div>`).join('');
+    }
+
+    function goMonth(m) {
+      state.month = m;
+      switchView('monthly');
+    }
+
+    // ===== 마일 계산기 =====
+    function openMileModal() {
+      document.getElementById('mileModal').classList.add('active');
+      const gc = getTx().filter(t => t.cat === 'giftcard').reduce((s, t) => s + t.amt, 0);
+      document.getElementById('mileGiftTotal').textContent = fmt(gc) + '원';
+      
+      const k = key(state.year, state.month);
+      const s = state.mileData[k] || {};
+      document.getElementById('mileCash').value = s.cash || '';
+      document.getElementById('mileFee').value = s.fee || '';
+      document.getElementById('mileBenefit').value = s.benefit || '';
+      document.getElementById('mileMile').value = s.mile || '';
+      calcMile();
+    }
+
+    function closeMileModal() {
+      const k = key(state.year, state.month);
+      state.mileData[k] = {
+        cash: parseInt(document.getElementById('mileCash').value) || 0,
+        fee: parseInt(document.getElementById('mileFee').value) || 0,
+        benefit: parseInt(document.getElementById('mileBenefit').value) || 0,
+        mile: parseInt(document.getElementById('mileMile').value) || 0
+      };
+      save();
+      document.getElementById('mileModal').classList.remove('active');
+    }
+
+    function calcMile() {
+      const gc = getTx().filter(t => t.cat === 'giftcard').reduce((s, t) => s + t.amt, 0);
+      const cash = parseInt(document.getElementById('mileCash').value) || 0;
+      const fee = parseInt(document.getElementById('mileFee').value) || 0;
+      const benefit = parseInt(document.getElementById('mileBenefit').value) || 0;
+      const mile = parseInt(document.getElementById('mileMile').value) || 0;
+      const actual = gc - cash + fee - benefit;
+
+      document.getElementById('rPurchase').textContent = fmt(gc) + '원';
+      document.getElementById('rCash').textContent = fmt(cash) + '원';
+      document.getElementById('rFee').textContent = fmt(fee) + '원';
+      document.getElementById('rBenefit').textContent = fmt(benefit) + '원';
+      document.getElementById('rActual').textContent = fmt(actual) + '원';
+      document.getElementById('rPerMile').textContent = mile > 0 && actual > 0 
+        ? (actual / mile).toFixed(1) + ' 원/마일'
+        : mile > 0 && actual <= 0 ? '무료! 🎉' : '- 원/마일';
+    }
+
+    function openYearlyMileModal() {
+      document.getElementById('yearlyMileModal').classList.add('active');
+      document.getElementById('yMileTitle').textContent = `✈️ ${state.year}년 연간 마일단가`;
+      
+      let yGc = 0, yCash = 0, yMile = 0;
+      for (let m = 1; m <= 12; m++) {
+        const tx = state.data[key(state.year, m)] || [];
+        tx.forEach(t => { if (t.cat === 'giftcard') yGc += t.amt; });
+        const md = state.mileData[key(state.year, m)] || {};
+        yCash += md.cash || 0;
+        yMile += md.mile || 0;
+      }
+
+      document.getElementById('yMileGift').textContent = fmt(yGc) + '원';
+      document.getElementById('yMileCash').textContent = fmt(yCash) + '원';
+      document.getElementById('yMileMile').textContent = fmt(yMile) + ' 마일';
+
+      const s = state.yearlyMileData[state.year] || {};
+      document.getElementById('yFee').value = s.fee || '';
+      document.getElementById('yBenefit').value = s.benefit || '';
+      calcYearlyMile();
+    }
+
+    function closeYearlyMileModal() {
+      state.yearlyMileData[state.year] = {
+        fee: parseInt(document.getElementById('yFee').value) || 0,
+        benefit: parseInt(document.getElementById('yBenefit').value) || 0
+      };
+      save();
+      document.getElementById('yearlyMileModal').classList.remove('active');
+    }
+
+    function calcYearlyMile() {
+      let yGc = 0, yCash = 0, yMile = 0;
+      for (let m = 1; m <= 12; m++) {
+        const tx = state.data[key(state.year, m)] || [];
+        tx.forEach(t => { if (t.cat === 'giftcard') yGc += t.amt; });
+        const md = state.mileData[key(state.year, m)] || {};
+        yCash += md.cash || 0;
+        yMile += md.mile || 0;
+      }
+      const fee = parseInt(document.getElementById('yFee').value) || 0;
+      const benefit = parseInt(document.getElementById('yBenefit').value) || 0;
+      const actual = yGc - yCash + fee - benefit;
+
+      document.getElementById('yrPurchase').textContent = fmt(yGc) + '원';
+      document.getElementById('yrCash').textContent = fmt(yCash) + '원';
+      document.getElementById('yrFee').textContent = fmt(fee) + '원';
+      document.getElementById('yrBenefit').textContent = fmt(benefit) + '원';
+      document.getElementById('yrActual').textContent = fmt(actual) + '원';
+      document.getElementById('yrPerMile').textContent = yMile > 0 && actual > 0
+        ? (actual / yMile).toFixed(1) + ' 원/마일'
+        : yMile > 0 && actual <= 0 ? '무료! 🎉' : '- 원/마일';
+    }
+  </script>
+</body>
+</html>
