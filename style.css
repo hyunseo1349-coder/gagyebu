@@ -1,76 +1,182 @@
-:root {
-  --bg: #f4f5f7;
-  --card: #ffffff;
-  --text: #111827;
-  --border: #e5e7eb;
-}
-
-.dark {
-  --bg: #0f172a;
-  --card: #020617;
-  --text: #e5e7eb;
-  --border: #1e293b;
-}
-
+/* =========================
+   RESET
+========================= */
 * {
   box-sizing: border-box;
-  font-family: 'Noto Sans KR', sans-serif;
 }
 
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  background: #f5f6f8;
+  color: #222;
 }
 
+/* =========================
+   TOP HEADER
+========================= */
 .top {
+  background: #fff;
+  padding: 16px;
+  text-align: center;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.period {
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 12px;
-  padding: 16px;
 }
 
-.view-switch {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
+.period button {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: #fff;
 }
 
+.view-toggle {
+  margin-top: 10px;
+}
+
+.view-toggle button {
+  padding: 6px 14px;
+  border-radius: 16px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  margin: 0 4px;
+}
+
+.view-toggle .active {
+  background: #5b6cff;
+  color: #fff;
+  border-color: #5b6cff;
+}
+
+/* =========================
+   LAYOUT
+========================= */
 .container {
+  max-width: 520px;
+  margin: 0 auto;
   padding: 16px;
-  max-width: 420px;
-  margin: auto;
 }
 
 .card {
-  background: var(--card);
-  border-radius: 16px;
-  padding: 16px;
+  background: #fff;
+  border-radius: 18px;
+  padding: 18px;
   margin-bottom: 16px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.04);
 }
 
-input, select, button {
+.card h3 {
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+
+/* =========================
+   FORM
+========================= */
+input,
+select {
   width: 100%;
   padding: 12px;
-  margin-top: 8px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text);
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  margin-bottom: 10px;
+  font-size: 15px;
 }
 
 button {
-  background: #4f46e5;
-  color: #fff;
-  font-weight: 600;
+  padding: 10px 14px;
+  border-radius: 12px;
   border: none;
-  cursor: pointer;
+  background: #5b6cff;
+  color: #fff;
+  font-size: 15px;
 }
 
+button:active {
+  transform: scale(0.97);
+}
+
+/* =========================
+   TOGGLE
+========================= */
 .toggle {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  font-size: 15px;
+}
+
+/* =========================
+   LIST
+========================= */
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+li {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 15px;
+}
+
+li:last-child {
+  border-bottom: none;
+}
+
+/* =========================
+   CHART
+========================= */
+canvas {
+  max-width: 100%;
+}
+
+/* =========================
+   DARK MODE
+========================= */
+.dark body {
+  background: #121212;
+  color: #eee;
+}
+
+.dark .top {
+  background: #1c1c1c;
+  border-bottom-color: #333;
+}
+
+.dark .card {
+  background: #1e1e1e;
+  box-shadow: none;
+}
+
+.dark input,
+.dark select {
+  background: #2a2a2a;
+  color: #eee;
+  border-color: #444;
+}
+
+.dark button {
+  background: #7c83ff;
+}
+
+.dark .view-toggle button {
+  background: #2a2a2a;
+  color: #ccc;
+  border-color: #444;
+}
+
+.dark .view-toggle .active {
+  background: #7c83ff;
+  color: #fff;
 }
