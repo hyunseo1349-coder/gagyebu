@@ -322,9 +322,11 @@
     .stat-card.pink .stat-value { color: var(--pink); }
     .stat-hint {
       font-size: 11px;
-      color: var(--warning);
+      opacity: 0.85;
       margin-top: 4px;
     }
+    .stat-card.pink .stat-hint { color: var(--pink); }
+    .stat-card.yellow .stat-hint { color: var(--warning); }
     
     /* 차트 섹션 */
     .chart-section {
@@ -1010,11 +1012,12 @@
         <div class="stat-card pink clickable" onclick="filterByFamily()">
           <span class="stat-label">👨‍👩‍👧 가족 지출</span>
           <span class="stat-value" id="familyAmt">0원</span>
-          <span class="stat-hint" style="color: var(--pink);">👆 가족 내역 보기</span>
+          <span class="stat-hint">👆 가족 내역 보기</span>
         </div>
         <div class="stat-card yellow clickable" onclick="openMileModal()">
-          <span class="stat-label">🎁 상품권 <span style="font-size:10px; opacity:0.8;">👆 마일단가</span></span>
+          <span class="stat-label">🎁 상품권</span>
           <span class="stat-value" id="giftAmt">0원</span>
+          <span class="stat-hint" id="mileUnitHint">👆 마일단가 계산</span>
         </div>
       </div>
 
@@ -1574,15 +1577,25 @@
     function renderMonthly() {
       const tx = getTx();
       let total = 0, myTotal = 0, familyTotal = 0, giftTotal = 0;
-      const catTotals = {};
+      const catTotals = {};  // 카테고리별 내 실제 지출 (상품권 제외)
 
       tx.forEach(t => {
         total += t.amt;
-        if (t.cat === 'giftcard') giftTotal += t.amt;
-        else catTotals[t.cat] = (catTotals[t.cat] || 0) + t.amt;
-        
+
+        if (t.cat === 'giftcard') {
+          giftTotal += t.amt;
+        } else {
+          // 내 실제 지출 (상품권 제외)
+          if (t.split?.members) {
+            const myShare = t.split.members.me || 0;
+            myTotal += myShare;
+            // 카테고리별 내 실제 지출
+            catTotals[t.cat] = (catTotals[t.cat] || 0) + myShare;
+          }
+        }
+
+        // 가족 지출 (상품권 포함)
         if (t.split?.members) {
-          myTotal += t.split.members.me || 0;
           FAMILY_IDS.forEach(id => { familyTotal += t.split.members[id] || 0; });
         }
       });
@@ -1592,12 +1605,12 @@
       document.getElementById('familyAmt').textContent = fmtShort(familyTotal) + '원';
       document.getElementById('giftAmt').textContent = fmtShort(giftTotal) + '원';
 
-      renderCategoryChart(catTotals);
+      renderCategoryChart(catTotals, myTotal);
       renderTrendChart();
       renderTxList(tx);
     }
 
-    function renderCategoryChart(data) {
+    function renderCategoryChart(data, myTotal) {
       const ctx = document.getElementById('categoryChart');
       if (state.charts.category) state.charts.category.destroy();
 
@@ -1611,7 +1624,8 @@
         return;
       }
 
-      const total = cats.reduce((sum, c) => sum + data[c], 0);
+      // 내 실제 지출 기준 100%
+      const total = myTotal || cats.reduce((sum, c) => sum + data[c], 0);
 
       state.charts.category = new Chart(ctx, {
         type: 'doughnut',
@@ -1845,7 +1859,9 @@
         }
       }
 
-      if (!tx.split.members.hasOwnProperty('me')) {
+      // 나 제외 가능: 최소 1명은 선택되어 있어야 함
+      if (Object.keys(tx.split.members).length === 0) {
+        // 아무도 선택 안 되면 me를 다시 추가
         tx.split.members['me'] = tx.amt;
       }
 
@@ -2087,14 +2103,22 @@
     function detectCategory(store) {
       const text = store.toLowerCase();
       const patterns = [
-        [/스타벅스|커피|카페|베이커리|식당|치킨|피자|배달|마트|편의점|음식/i, 'food'],
-        [/주유|충전|택시|버스|지하철|교통|주차/i, 'transport'],
-        [/cgv|메가박스|영화|넷플릭스|게임|노래방|헬스/i, 'leisure'],
-        [/병원|약국|의료|치과|안과/i, 'medical'],
-        [/학원|교육|강의|도서/i, 'education'],
-        [/전기|가스|수도|통신|인터넷/i, 'utility'],
-        [/상품권/i, 'giftcard'],
-        [/쿠팡|네이버|쇼핑|백화점|아울렛/i, 'shopping']
+        // 상품권 (먼저 체크 - 띵샵, 교환권 등 포함)
+        [/상품권|기프트|교환권|띵샵|해피머니|컬쳐랜드|북앤라이프|문화상품권|도서상품권|백화점상품권|모바일쿠폰|기프티콘|기프티쇼|카카오선물|선물하기/i, 'giftcard'],
+        // 식비
+        [/스타벅스|커피|카페|베이커리|식당|치킨|피자|배달|마트|편의점|음식|밥|국밥|고기|삼겹|갈비/i, 'food'],
+        // 교통
+        [/주유|충전|택시|버스|지하철|교통|주차|하이패스|톨게이트|대리운전/i, 'transport'],
+        // 여가
+        [/cgv|메가박스|영화|넷플릭스|게임|노래방|헬스|피트니스|골프/i, 'leisure'],
+        // 의료
+        [/병원|약국|의료|치과|안과|한의원|클리닉/i, 'medical'],
+        // 교육
+        [/학원|교육|강의|도서|교보문고|알라딘|yes24/i, 'education'],
+        // 공과금
+        [/전기|가스|수도|통신|인터넷|skt|kt|lg유플러스/i, 'utility'],
+        // 쇼핑
+        [/쿠팡|네이버|쇼핑|백화점|아울렛|무신사|다이소|올리브영/i, 'shopping']
       ];
       for (const [p, c] of patterns) {
         if (p.test(text)) return c;
@@ -2395,8 +2419,9 @@
         [/skt|kt|lg유플러스|통신|전기|가스|수도|관리비|인터넷|이동통신/i, 'utility'],
         [/보험|건강보험|국민연금|세금|공과금/i, 'utility'],
 
-        // 상품권
-        [/상품권|기프트카드|기프트|문화상품권/i, 'giftcard']
+        // 상품권 (띵샵, 교환권 등 포함)
+        [/상품권|기프트카드|기프트|교환권|띵샵|문화상품권|도서상품권|백화점상품권|신세계상품권|롯데상품권/i, 'giftcard'],
+        [/해피머니|컬쳐랜드|북앤라이프|모바일쿠폰|기프티콘|기프티쇼|카카오선물|선물하기/i, 'giftcard']
       ];
 
       for (const [pattern, category] of patterns) {
@@ -2435,11 +2460,29 @@
       // ===== 카드/결제수단 인식 (확장된 패턴) =====
       let card = '카드';
       const cardPatterns = [
-        // 현대카드 상품명 (대한항공카드, M카드 등) - 먼저 체크
+        // 현대카드 상품명 (먼저 체크)
         [/대한항공카드\s*\d*/i, '현대 대한항공카드'],
-        [/현대\s*M\s*카드|M\s*카드\s*\d*/i, '현대 M카드'],
-        [/현대\s*X\s*카드|X\s*카드/i, '현대 X카드'],
-        [/현대\s*제로|ZERO/i, '현대 제로카드'],
+        [/아시아나카드\s*\d*/i, '현대 아시아나카드'],
+        [/M\s*카드|엠카드/i, '현대 M카드'],
+        [/X\s*카드|엑스카드/i, '현대 X카드'],
+        [/제로카드|ZERO/i, '현대 제로카드'],
+        [/그린카드/i, '현대 그린카드'],
+        [/코스트코\s*카드/i, '현대 코스트코카드'],
+        [/프리비아카드/i, '현대 프리비아카드'],
+        [/네이버\s*현대카드/i, '네이버 현대카드'],
+        [/카카오\s*현대카드/i, '카카오 현대카드'],
+
+        // 삼성카드 상품명
+        [/taptap|탭탭/i, '삼성 탭탭'],
+        [/삼성\s*iD/i, '삼성 iD카드'],
+
+        // 신한카드 상품명
+        [/딥드림|deep\s*dream/i, '신한 딥드림'],
+        [/Mr\.Life|미스터라이프/i, '신한 Mr.Life'],
+
+        // KB국민카드 상품명
+        [/탄탄대로/i, 'KB 탄탄대로'],
+
         // 주요 카드사
         [/신한(?:카드|BC)?|신한체크/i, '신한카드'],
         [/삼성(?:카드)?/i, '삼성카드'],
@@ -2453,6 +2496,9 @@
         [/IBK|기업은행/i, 'IBK기업은행'],
         [/씨티|시티|CITI/i, '씨티카드'],
         [/카카오뱅크|카뱅/i, '카카오뱅크'],
+        [/케이뱅크|K뱅크/i, '케이뱅크'],
+        [/토스뱅크/i, '토스뱅크'],
+
         // 간편결제
         [/네이버페이|네이버\s*페이|NAVER|N페이/i, '네이버페이'],
         [/카카오페이|카카오\s*페이|KAKAO/i, '카카오페이'],
@@ -2460,6 +2506,8 @@
         [/페이코|PAYCO/i, '페이코'],
         [/삼성페이|samsung\s*pay/i, '삼성페이'],
         [/애플페이|apple\s*pay/i, '애플페이'],
+        [/제로페이/i, '제로페이'],
+
         // 체크카드
         [/체크/i, '체크카드'],
         // 현금/계좌이체
