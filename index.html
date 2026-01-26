@@ -290,6 +290,8 @@
       border: 1px solid var(--border);
       position: relative;
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
     .stat-card::before {
       content: '';
@@ -1468,7 +1470,26 @@
     const uid = () => Date.now().toString(36) + Math.random().toString(36).substr(2);
 
     // ===== 저장/불러오기 =====
+    // 날짜순 정렬 (최신순)
+    function sortByDate(transactions) {
+      return transactions.sort((a, b) => {
+        // MM/DD 형식 파싱
+        const [am, ad] = (a.date || '01/01').split('/').map(Number);
+        const [bm, bd] = (b.date || '01/01').split('/').map(Number);
+        // 월 비교 후 일 비교 (내림차순: 최신이 위로)
+        if (am !== bm) return bm - am;
+        return bd - ad;
+      });
+    }
+
     function save() {
+      // 모든 월의 거래 내역 날짜순 정렬
+      for (const k in state.data) {
+        if (Array.isArray(state.data[k])) {
+          state.data[k] = sortByDate(state.data[k]);
+        }
+      }
+
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         data: state.data,
         mileData: state.mileData,
@@ -1508,6 +1529,7 @@
     // ===== 초기화 =====
     document.addEventListener('DOMContentLoaded', () => {
       load();
+      loadStoreRules();
       const today = new Date();
       if (today.getFullYear() >= START_YEAR) {
         state.year = today.getFullYear();
@@ -2129,7 +2151,11 @@
     function confirmExcelParse() {
       const k = key(state.year, state.month);
       if (!state.data[k]) state.data[k] = [];
-      parsedTx.forEach(t => state.data[k].unshift(t));
+      // 저장된 규칙 적용 후 추가
+      parsedTx.forEach(t => {
+        applyStoreRule(t);
+        state.data[k].unshift(t);
+      });
       save();
 
       document.getElementById('excelParseResult').innerHTML = '';
@@ -2678,7 +2704,11 @@
     function confirmParse() {
       const k = key(state.year, state.month);
       if (!state.data[k]) state.data[k] = [];
-      parsedTx.forEach(t => state.data[k].unshift(t));
+      // 저장된 규칙 적용 후 추가
+      parsedTx.forEach(t => {
+        applyStoreRule(t);
+        state.data[k].unshift(t);
+      });
       save();
       
       document.getElementById('quickInput').value = '';
@@ -3010,7 +3040,12 @@
       const txIdx = txList.findIndex(t => t.id === tid);
       if (txIdx === -1) { alert('거래를 찾을 수 없습니다'); return; }
 
+      const oldTx = { ...txList[txIdx] };
       const oldAmt = txList[txIdx].amt;
+      const catChanged = oldTx.cat !== cat;
+      const cardChanged = oldTx.card !== card;
+
+      // 현재 거래 업데이트
       txList[txIdx].store = store;
       txList[txIdx].amt = amt;
       txList[txIdx].date = date;
@@ -3027,11 +3062,116 @@
         });
       }
 
+      // 카테고리나 카드가 변경된 경우 유사 거래 업데이트 제안
+      if (catChanged || cardChanged) {
+        // 가맹점명 기반으로 유사 거래 찾기 (전체 데이터에서)
+        const storeName = normalizeStoreName(oldTx.store);
+        const similarTxs = findSimilarTransactions(storeName, tid);
+
+        if (similarTxs.length > 0) {
+          const changes = [];
+          if (catChanged) changes.push(`카테고리: ${getCategoryName(oldTx.cat)} → ${getCategoryName(cat)}`);
+          if (cardChanged) changes.push(`카드: ${oldTx.card} → ${card}`);
+
+          const confirmMsg = `"${oldTx.store}"와 유사한 거래가 ${similarTxs.length}건 있습니다.\n\n변경 내용:\n${changes.join('\n')}\n\n모두 변경하시겠습니까?`;
+
+          if (confirm(confirmMsg)) {
+            updateSimilarTransactions(similarTxs, catChanged ? cat : null, cardChanged ? card : null);
+          }
+        }
+
+        // 규칙 저장 (향후 자동 적용용)
+        saveStoreRule(storeName, cat, card);
+      }
+
       save();
       closeEditModal();
       state.expandedId = null;
       render();
       alert('수정되었습니다!');
+    }
+
+    // 가맹점명 정규화 (유사 매칭용)
+    function normalizeStoreName(store) {
+      return store
+        .replace(/\s+/g, '')           // 공백 제거
+        .replace(/[0-9]+점$/g, '점')    // "강남1점" -> "강남점"
+        .replace(/[0-9]+호점$/g, '점')  // "123호점" -> "점"
+        .replace(/\(.+\)$/g, '')        // 괄호 내용 제거
+        .toLowerCase();
+    }
+
+    // 유사 거래 찾기
+    function findSimilarTransactions(normalizedStore, excludeId) {
+      const similar = [];
+      const threshold = 0.6; // 60% 이상 유사하면 매칭
+
+      for (const monthKey in state.data) {
+        const txList = state.data[monthKey] || [];
+        for (const tx of txList) {
+          if (tx.id === excludeId) continue;
+
+          const txNormalized = normalizeStoreName(tx.store);
+
+          // 정확히 같거나, 하나가 다른 하나를 포함하면 유사
+          if (txNormalized === normalizedStore ||
+              txNormalized.includes(normalizedStore) ||
+              normalizedStore.includes(txNormalized)) {
+            similar.push({ monthKey, tx });
+          }
+        }
+      }
+
+      return similar;
+    }
+
+    // 유사 거래 일괄 업데이트
+    function updateSimilarTransactions(similarTxs, newCat, newCard) {
+      for (const { monthKey, tx } of similarTxs) {
+        const txList = state.data[monthKey] || [];
+        const txObj = txList.find(t => t.id === tx.id);
+        if (txObj) {
+          if (newCat) txObj.cat = newCat;
+          if (newCard) txObj.card = newCard;
+        }
+      }
+    }
+
+    // 카테고리 이름 가져오기
+    function getCategoryName(catKey) {
+      return CATEGORIES[catKey]?.name || catKey;
+    }
+
+    // 가맹점 규칙 저장 (향후 자동 적용용)
+    function saveStoreRule(normalizedStore, cat, card) {
+      if (!state.storeRules) state.storeRules = {};
+      state.storeRules[normalizedStore] = { cat, card };
+      localStorage.setItem('storeRules', JSON.stringify(state.storeRules));
+    }
+
+    // 가맹점 규칙 로드
+    function loadStoreRules() {
+      try {
+        state.storeRules = JSON.parse(localStorage.getItem('storeRules')) || {};
+      } catch (e) {
+        state.storeRules = {};
+      }
+    }
+
+    // 가맹점 규칙 적용
+    function applyStoreRule(tx) {
+      const normalized = normalizeStoreName(tx.store);
+      for (const ruleStore in state.storeRules) {
+        if (normalized === ruleStore ||
+            normalized.includes(ruleStore) ||
+            ruleStore.includes(normalized)) {
+          const rule = state.storeRules[ruleStore];
+          if (rule.cat) tx.cat = rule.cat;
+          if (rule.card) tx.card = rule.card;
+          return true;
+        }
+      }
+      return false;
     }
 
     function deleteTx(tid) {
