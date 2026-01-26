@@ -1455,6 +1455,7 @@
           <button class="settings-tab active" onclick="switchSettingsTab('card')">💳 카드</button>
           <button class="settings-tab" onclick="switchSettingsTab('category')">🏷️ 카테고리</button>
           <button class="settings-tab" onclick="switchSettingsTab('data')">💾 데이터</button>
+          <button class="settings-tab" onclick="switchSettingsTab('cloud')">☁️ 동기화</button>
         </div>
 
         <!-- 카드 탭 -->
@@ -1491,6 +1492,37 @@
           </div>
           <div style="font-size:11px; color:var(--text-muted);">
             JSON 파일로 모든 데이터를 백업하고 복원할 수 있습니다.
+          </div>
+        </div>
+
+        <!-- 클라우드 동기화 탭 -->
+        <div class="settings-content" id="settingsCloud">
+          <div class="mile-title">GitHub Gist 동기화</div>
+          <div style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
+            여러 기기에서 데이터를 동기화할 수 있습니다.
+          </div>
+          <div class="edit-form-group" style="margin-bottom:12px;">
+            <label style="font-size:12px;">GitHub Token</label>
+            <input type="password" id="gistToken" class="form-input" placeholder="ghp_xxxx..." style="font-size:13px;">
+          </div>
+          <div class="edit-form-group" style="margin-bottom:12px;">
+            <label style="font-size:12px;">Gist ID (없으면 자동 생성)</label>
+            <input type="text" id="gistId" class="form-input" placeholder="선택사항" style="font-size:13px;">
+          </div>
+          <div style="display:flex; gap:8px; margin-bottom:12px;">
+            <button class="btn btn-secondary" style="flex:1;" onclick="saveGistSettings()">💾 설정 저장</button>
+          </div>
+          <div style="display:flex; gap:8px; margin-bottom:12px;">
+            <button class="btn btn-primary" style="flex:1;" onclick="cloudUpload()">☁️ 클라우드 저장</button>
+            <button class="btn btn-secondary" style="flex:1;" onclick="cloudDownload()">📥 클라우드 불러오기</button>
+          </div>
+          <div id="cloudStatus" style="font-size:11px; color:var(--text-muted); margin-top:8px;"></div>
+          <div style="font-size:11px; color:var(--text-muted); margin-top:12px; padding:10px; background:var(--bg); border-radius:8px;">
+            <strong>토큰 발급 방법:</strong><br>
+            1. GitHub → Settings → Developer settings<br>
+            2. Personal access tokens → Tokens (classic)<br>
+            3. Generate new token → gist 권한 체크<br>
+            4. 생성된 토큰을 위에 입력
           </div>
         </div>
       </div>
@@ -3661,6 +3693,134 @@
 
       if (tab === 'card') renderCustomCardList();
       if (tab === 'category') renderCustomCategoryList();
+      if (tab === 'cloud') loadGistSettings();
+    }
+
+    // ===== GitHub Gist 동기화 =====
+    function loadGistSettings() {
+      const settings = JSON.parse(localStorage.getItem('gistSettings') || '{}');
+      document.getElementById('gistToken').value = settings.token || '';
+      document.getElementById('gistId').value = settings.gistId || '';
+      updateCloudStatus('');
+    }
+
+    function saveGistSettings() {
+      const token = document.getElementById('gistToken').value.trim();
+      const gistId = document.getElementById('gistId').value.trim();
+      localStorage.setItem('gistSettings', JSON.stringify({ token, gistId }));
+      updateCloudStatus('✅ 설정이 저장되었습니다.');
+    }
+
+    function updateCloudStatus(msg) {
+      document.getElementById('cloudStatus').textContent = msg;
+    }
+
+    async function cloudUpload() {
+      const settings = JSON.parse(localStorage.getItem('gistSettings') || '{}');
+      if (!settings.token) {
+        updateCloudStatus('❌ GitHub 토큰을 먼저 입력하세요.');
+        return;
+      }
+
+      updateCloudStatus('⏳ 업로드 중...');
+
+      const exportData = {
+        version: 2,
+        exportDate: new Date().toISOString(),
+        data: state.data,
+        mileData: state.mileData,
+        yearlyMileData: state.yearlyMileData,
+        customCards: state.customCards,
+        customCategories: state.customCategories
+      };
+
+      try {
+        let gistId = settings.gistId;
+        const headers = {
+          'Authorization': `token ${settings.token}`,
+          'Content-Type': 'application/json'
+        };
+
+        if (gistId) {
+          // 기존 Gist 업데이트
+          const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({
+              description: '나만의 가계부 데이터',
+              files: { 'gagyebu-data.json': { content: JSON.stringify(exportData, null, 2) } }
+            })
+          });
+          if (!res.ok) throw new Error('Gist 업데이트 실패');
+        } else {
+          // 새 Gist 생성
+          const res = await fetch('https://api.github.com/gists', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              description: '나만의 가계부 데이터',
+              public: false,
+              files: { 'gagyebu-data.json': { content: JSON.stringify(exportData, null, 2) } }
+            })
+          });
+          if (!res.ok) throw new Error('Gist 생성 실패');
+          const data = await res.json();
+          gistId = data.id;
+          document.getElementById('gistId').value = gistId;
+          localStorage.setItem('gistSettings', JSON.stringify({ token: settings.token, gistId }));
+        }
+
+        updateCloudStatus(`✅ 업로드 완료! (${new Date().toLocaleTimeString()})`);
+      } catch (e) {
+        updateCloudStatus(`❌ 오류: ${e.message}`);
+      }
+    }
+
+    async function cloudDownload() {
+      const settings = JSON.parse(localStorage.getItem('gistSettings') || '{}');
+      if (!settings.token || !settings.gistId) {
+        updateCloudStatus('❌ 토큰과 Gist ID를 먼저 입력하세요.');
+        return;
+      }
+
+      updateCloudStatus('⏳ 다운로드 중...');
+
+      try {
+        const res = await fetch(`https://api.github.com/gists/${settings.gistId}`, {
+          headers: { 'Authorization': `token ${settings.token}` }
+        });
+        if (!res.ok) throw new Error('Gist 불러오기 실패');
+
+        const gist = await res.json();
+        const file = gist.files['gagyebu-data.json'];
+        if (!file) throw new Error('데이터 파일을 찾을 수 없습니다.');
+
+        const importData = JSON.parse(file.content);
+
+        if (confirm(`클라우드 데이터를 불러오면 현재 데이터가 덮어씌워집니다.\n계속하시겠습니까?\n\n저장 시간: ${new Date(importData.exportDate).toLocaleString()}`)) {
+          state.data = importData.data || {};
+          state.mileData = importData.mileData || {};
+          state.yearlyMileData = importData.yearlyMileData || {};
+          state.customCards = importData.customCards || [];
+          state.customCategories = importData.customCategories || [];
+
+          // 커스텀 카드/카테고리 복원
+          if (state.customCards) {
+            state.customCards.forEach(c => { CARDS[c.key] = c.name; });
+          }
+          if (state.customCategories) {
+            state.customCategories.forEach(c => { CATEGORIES[c.key] = { name: c.name, color: c.color }; });
+          }
+
+          save();
+          render();
+          updateCloudStatus(`✅ 불러오기 완료! (${new Date().toLocaleTimeString()})`);
+        } else {
+          updateCloudStatus('취소됨');
+        }
+      } catch (e) {
+        updateCloudStatus(`❌ 오류: ${e.message}`);
+      }
     }
 
     // ===== 커스텀 카테고리 관리 =====
