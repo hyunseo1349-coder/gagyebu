@@ -544,6 +544,48 @@
       font-size: 14px;
     }
     
+    /* 카드별 필터 */
+    .card-filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .card-filter-bar:empty { display: none; }
+    .card-filter-chip {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .card-filter-chip:hover {
+      background: var(--bg-hover);
+      border-color: var(--primary);
+    }
+    .card-filter-chip.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    .card-filter-chip .chip-count {
+      display: inline-block;
+      background: rgba(0,0,0,0.1);
+      padding: 2px 6px;
+      border-radius: 10px;
+      margin-left: 4px;
+      font-size: 10px;
+    }
+    .card-filter-chip.active .chip-count {
+      background: rgba(255,255,255,0.2);
+    }
+
     .tx-list { display: flex; flex-direction: column; gap: 8px; }
     .tx-item {
       padding: 16px;
@@ -1201,6 +1243,8 @@
             <button class="filter-clear" onclick="clearFilter()">✕</button>
           </div>
         </div>
+        <!-- 카드별 필터 -->
+        <div class="card-filter-bar" id="cardFilterBar"></div>
         <div class="tx-list" id="txList"></div>
       </div>
     </div>
@@ -1552,6 +1596,7 @@
       month: 1,
       view: 'monthly',
       filter: null,
+      cardFilter: null,   // 카드별 필터
       expandedId: null,
       data: {},           // 월별 거래
       mileData: {},       // 월별 마일 입력
@@ -1868,7 +1913,11 @@
           if (!t.split?.members) return false;
           return FAMILY_IDS.some(id => t.split.members.hasOwnProperty(id) && t.split.members[id] > 0);
         });
+      } else if (state.filter === 'card' && state.cardFilter) {
+        // 카드별 필터링
+        filtered = tx.filter(t => t.card === state.cardFilter);
       } else if (state.filter) {
+        // 카테고리별 필터링
         filtered = tx.filter(t => t.cat === state.filter);
       } else {
         filtered = tx;
@@ -2053,7 +2102,9 @@
 
     function clearFilter() {
       state.filter = null;
+      state.cardFilter = null;
       document.getElementById('filterBadge').classList.remove('active');
+      renderCardFilterBar();
       renderTxList(getTx());
     }
 
@@ -3498,8 +3549,57 @@
     // ===== 가족 지출 필터링 =====
     function filterByFamily() {
       state.filter = 'family';
+      state.cardFilter = null;
       document.getElementById('filterBadge').classList.add('active');
       document.getElementById('filterText').textContent = '가족 지출 필터';
+      renderCardFilterBar();
+      renderTxList(getTx());
+    }
+
+    // ===== 카드별 필터링 =====
+    function renderCardFilterBar() {
+      const bar = document.getElementById('cardFilterBar');
+      if (!bar) return;
+
+      const tx = getTx();
+      // 현재 월 거래에서 사용된 카드 목록 (건수 포함)
+      const cardCounts = {};
+      tx.forEach(t => {
+        if (t.card) {
+          cardCounts[t.card] = (cardCounts[t.card] || 0) + 1;
+        }
+      });
+
+      const cards = Object.keys(cardCounts).sort((a, b) => cardCounts[b] - cardCounts[a]);
+
+      if (cards.length <= 1) {
+        bar.innerHTML = '';
+        return;
+      }
+
+      bar.innerHTML = cards.map(card => {
+        const isActive = state.cardFilter === card;
+        return `
+          <div class="card-filter-chip ${isActive ? 'active' : ''}" onclick="filterByCard('${card.replace(/'/g, "\\'")}')">
+            ${card}<span class="chip-count">${cardCounts[card]}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function filterByCard(card) {
+      if (state.cardFilter === card) {
+        // 같은 카드 다시 클릭하면 필터 해제
+        state.cardFilter = null;
+        state.filter = null;
+        document.getElementById('filterBadge').classList.remove('active');
+      } else {
+        state.cardFilter = card;
+        state.filter = 'card';
+        document.getElementById('filterBadge').classList.add('active');
+        document.getElementById('filterText').textContent = card + ' 필터';
+      }
+      renderCardFilterBar();
       renderTxList(getTx());
     }
 
