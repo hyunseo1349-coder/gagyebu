@@ -544,20 +544,26 @@
       font-size: 14px;
     }
     
+    /* 거래내역 헤더 */
+    .tx-header-left { flex: 1; }
+    .tx-title-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
     /* 카드별 필터 */
     .card-filter-bar {
       display: flex;
       flex-wrap: wrap;
-      gap: 6px;
-      margin-bottom: 12px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--border);
+      gap: 4px;
     }
     .card-filter-bar:empty { display: none; }
     .card-filter-chip {
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 10px;
       font-weight: 600;
       background: var(--bg);
       border: 1px solid var(--border);
@@ -1234,8 +1240,11 @@
       <!-- 거래 내역 -->
       <div class="tx-section">
         <div class="tx-header">
-          <div>
-            <div class="tx-title">거래 내역</div>
+          <div class="tx-header-left">
+            <div class="tx-title-row">
+              <div class="tx-title">거래 내역</div>
+              <div class="card-filter-bar" id="cardFilterBar"></div>
+            </div>
             <div class="tx-subtitle">💡 클릭하면 정산 설정 가능</div>
           </div>
           <div class="filter-badge" id="filterBadge">
@@ -1243,8 +1252,6 @@
             <button class="filter-clear" onclick="clearFilter()">✕</button>
           </div>
         </div>
-        <!-- 카드별 필터 -->
-        <div class="card-filter-bar" id="cardFilterBar"></div>
         <div class="tx-list" id="txList"></div>
       </div>
     </div>
@@ -1775,6 +1782,7 @@
         renderCategoryChart(catTotals, myTotal);
         renderTrendChart();
       }
+      renderCardFilterBar();
       renderTxList(tx);
     }
 
