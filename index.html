@@ -805,6 +805,77 @@
     
     .mile-section { margin-bottom: 20px; }
     .mile-title { font-size: 14px; font-weight: 700; margin-bottom: 12px; }
+
+    /* 설정 탭 */
+    .settings-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+    .settings-tab {
+      flex: 1;
+      padding: 8px 12px;
+      border: none;
+      background: transparent;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+    .settings-tab:hover { background: var(--bg-hover); }
+    .settings-tab.active {
+      background: var(--primary);
+      color: white;
+    }
+    .settings-content { display: none; }
+    .settings-content.active { display: block; }
+
+    /* 커스텀 아이템 리스트 */
+    .custom-item-list {
+      max-height: 150px;
+      overflow-y: auto;
+      margin-bottom: 12px;
+    }
+    .custom-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: var(--bg);
+      border-radius: 8px;
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+    .custom-item-name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .custom-item-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+    }
+    .custom-item-del {
+      background: none;
+      border: none;
+      color: var(--danger);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+    .custom-item-del:hover { background: rgba(239, 68, 68, 0.1); }
+    .custom-add-row {
+      display: flex;
+      gap: 8px;
+    }
+    .custom-add-row .form-input { flex: 1; }
+    .btn-sm { padding: 8px 16px; font-size: 12px; }
     .mile-info-box {
       background: linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%);
       border-radius: 12px;
@@ -1277,23 +1348,47 @@
 
   <!-- 설정 모달 -->
   <div class="modal-overlay" id="settingsModal" onclick="closeSettingsModal()">
-    <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal" style="max-width:480px;" onclick="event.stopPropagation()">
       <div class="modal-header">
         <div class="modal-title">⚙️ 설정</div>
         <button class="modal-close" onclick="closeSettingsModal()">×</button>
       </div>
-      <div class="modal-body">
-        <div class="mile-section">
-          <div class="mile-title">💳 커스텀 카드 관리</div>
-          <div id="customCardList" style="margin-bottom:12px;"></div>
-          <div style="display:flex; gap:8px;">
-            <input type="text" id="newCardName" class="form-input" placeholder="새 카드명 (예: 현대150)" style="flex:1;">
-            <button class="btn btn-primary" style="width:auto; padding:10px 16px;" onclick="addCustomCard()">추가</button>
+      <div class="modal-body" style="max-height:60vh; overflow-y:auto;">
+        <!-- 탭 -->
+        <div class="settings-tabs">
+          <button class="settings-tab active" onclick="switchSettingsTab('card')">💳 카드</button>
+          <button class="settings-tab" onclick="switchSettingsTab('category')">🏷️ 카테고리</button>
+          <button class="settings-tab" onclick="switchSettingsTab('data')">💾 데이터</button>
+        </div>
+
+        <!-- 카드 탭 -->
+        <div class="settings-content active" id="settingsCard">
+          <div class="mile-title">커스텀 카드 관리</div>
+          <div id="customCardList" class="custom-item-list"></div>
+          <div class="custom-add-row">
+            <input type="text" id="newCardName" class="form-input" placeholder="새 카드명 (예: 현대150)">
+            <button class="btn btn-primary btn-sm" onclick="addCustomCard()">추가</button>
           </div>
         </div>
-        <div class="mile-section">
-          <div class="mile-title">💾 데이터 백업/복원</div>
-          <div style="display:flex; gap:8px; margin-bottom:8px;">
+
+        <!-- 카테고리 탭 -->
+        <div class="settings-content" id="settingsCategory">
+          <div class="mile-title">커스텀 카테고리 관리</div>
+          <div id="customCategoryList" class="custom-item-list"></div>
+          <div class="custom-add-row">
+            <input type="text" id="newCategoryName" class="form-input" placeholder="카테고리명">
+            <input type="color" id="newCategoryColor" value="#6B7280" style="width:40px; height:36px; padding:2px; border-radius:6px; cursor:pointer;">
+            <button class="btn btn-primary btn-sm" onclick="addCustomCategory()">추가</button>
+          </div>
+          <div style="font-size:11px; color:var(--text-muted); margin-top:8px;">
+            기본 카테고리: 식비, 쇼핑, 교통, 여가, 여행, 의료, 공과금, 교육, 상품권, 기타
+          </div>
+        </div>
+
+        <!-- 데이터 탭 -->
+        <div class="settings-content" id="settingsData">
+          <div class="mile-title">데이터 백업/복원</div>
+          <div style="display:flex; gap:8px; margin-bottom:12px;">
             <button class="btn btn-secondary" style="flex:1;" onclick="exportData()">📤 내보내기</button>
             <button class="btn btn-secondary" style="flex:1;" onclick="document.getElementById('importFile').click()">📥 가져오기</button>
             <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importData(event)">
@@ -1438,11 +1533,12 @@
       { id: 'friend', name: '친구', isMe: false, isFamily: false }
     ];
     const FAMILY_IDS = ['mom', 'dad', 'sibling'];
-    const CATEGORIES = {
+    let CATEGORIES = {
       food: { name: '식비', color: '#F97316' },
       shopping: { name: '쇼핑', color: '#6366F1' },
       transport: { name: '교통', color: '#10B981' },
       leisure: { name: '여가', color: '#EC4899' },
+      travel: { name: '여행', color: '#0EA5E9' },
       medical: { name: '의료', color: '#EF4444' },
       utility: { name: '공과금', color: '#3B82F6' },
       education: { name: '교육', color: '#8B5CF6' },
@@ -1460,7 +1556,8 @@
       data: {},           // 월별 거래
       mileData: {},       // 월별 마일 입력
       yearlyMileData: {}, // 연간 마일 입력
-      charts: {}
+      charts: {},
+      lastChartData: null // 차트 데이터 캐시 (필터링 시 유지)
     };
 
     // ===== 유틸 =====
@@ -1530,6 +1627,7 @@
     document.addEventListener('DOMContentLoaded', () => {
       load();
       loadStoreRules();
+      loadCustomCategories();
       const today = new Date();
       if (today.getFullYear() >= START_YEAR) {
         state.year = today.getFullYear();
@@ -1596,7 +1694,7 @@
       return state.data[key(state.year, state.month)] || [];
     }
 
-    function renderMonthly() {
+    function renderMonthly(skipChart = false) {
       const tx = getTx();
       let total = 0, myTotal = 0, familyTotal = 0, giftTotal = 0;
       const catTotals = {};  // 카테고리별 내 실제 지출 (상품권 제외)
@@ -1627,8 +1725,11 @@
       document.getElementById('familyAmt').textContent = fmtShort(familyTotal) + '원';
       document.getElementById('giftAmt').textContent = fmtShort(giftTotal) + '원';
 
-      renderCategoryChart(catTotals, myTotal);
-      renderTrendChart();
+      // 필터링 중이 아닐 때만 차트 재렌더링
+      if (!skipChart) {
+        renderCategoryChart(catTotals, myTotal);
+        renderTrendChart();
+      }
       renderTxList(tx);
     }
 
@@ -1708,11 +1809,16 @@
             }
           },
           onClick: (e, el) => {
-            if (el.length) {
-              state.filter = cats[el[0].index];
-              document.getElementById('filterBadge').classList.add('active');
-              document.getElementById('filterText').textContent = CATEGORIES[state.filter]?.name + ' 필터';
-              renderTxList(getTx());
+            if (el.length && el[0].index < cats.length) {
+              const selectedCat = cats[el[0].index];
+              if (selectedCat) {
+                state.filter = selectedCat;
+                document.getElementById('filterBadge').classList.add('active');
+                const catName = CATEGORIES[selectedCat]?.name || selectedCat;
+                document.getElementById('filterText').textContent = catName + ' 필터';
+                // 차트 재렌더링 방지를 위해 트랜잭션 리스트만 업데이트
+                renderTxList(getTx());
+              }
             }
           }
         }
@@ -1777,9 +1883,10 @@
         const cat = CATEGORIES[t.cat] || CATEGORIES.etc;
         const isGift = t.cat === 'giftcard';
         const expanded = state.expandedId === t.id;
-        const myShare = t.split?.members?.me || t.amt;
+        // 나 체크 해제시 0원 표시
+        const myShare = t.split?.members?.hasOwnProperty('me') ? (t.split.members.me || 0) : t.amt;
         const memberCount = t.split?.members ? Object.keys(t.split.members).length : 1;
-        const hasSplit = memberCount > 1;
+        const hasSplit = memberCount > 1 || (t.split?.members && !t.split.members.hasOwnProperty('me'));
 
         return `
           <div class="tx-item ${expanded ? 'expanded' : ''}" onclick="toggleExpand('${t.id}')">
@@ -1889,7 +1996,8 @@
 
       save();
       renderTxList(getTx());
-      renderMonthly();
+      // 필터 활성화 중이면 차트 재렌더링 방지
+      renderMonthly(!!state.filter);
     }
 
     function updateSplitAmt(tid, mid, val) {
@@ -1923,24 +2031,24 @@
       
       save();
       renderTxList(getTx());
-      renderMonthly();
+      renderMonthly(!!state.filter);
     }
 
     function saveSplit(tid) {
       const tx = getTx().find(t => t.id === tid);
       if (!tx?.split?.members) return;
-      
+
       const total = Object.values(tx.split.members).reduce((a, b) => a + b, 0);
       if (total !== tx.amt) {
         alert(`합계(${fmt(total)}원)가 총액(${fmt(tx.amt)}원)과 다릅니다.`);
         return;
       }
-      
+
       save();
       alert('저장되었습니다!');
       state.expandedId = null;
       renderTxList(getTx());
-      renderMonthly();
+      renderMonthly(!!state.filter);
     }
 
     function clearFilter() {
@@ -2131,6 +2239,8 @@
         [/스타벅스|커피|카페|베이커리|식당|치킨|피자|배달|마트|편의점|음식|밥|국밥|고기|삼겹|갈비/i, 'food'],
         // 교통
         [/주유|충전|택시|버스|지하철|교통|주차|하이패스|톨게이트|대리운전/i, 'transport'],
+        // 여행
+        [/여행|호텔|펜션|숙박|에어비앤비|야놀자|여기어때|항공|비행기|공항|렌터카|투어|관광/i, 'travel'],
         // 여가
         [/cgv|메가박스|영화|넷플릭스|게임|노래방|헬스|피트니스|골프/i, 'leisure'],
         // 의료
@@ -2430,7 +2540,7 @@
         [/cgv|메가박스|롯데시네마|영화|극장/i, 'leisure'],
         [/넷플릭스|왓챠|웨이브|티빙|디즈니|유튜브|스포티파이/i, 'leisure'],
         [/노래방|pc방|게임|스팀|헬스|피트니스|골프|수영|테니스|볼링/i, 'leisure'],
-        [/여행|호텔|펜션|숙박|에어비앤비|야놀자|여기어때/i, 'leisure'],
+        [/여행|호텔|펜션|숙박|에어비앤비|야놀자|여기어때|항공|비행기|공항|렌터카|렌트카|투어|관광/i, 'travel'],
         [/공연|콘서트|뮤지컬|연극|전시|박물관|미술관/i, 'leisure'],
 
         // 의료
@@ -3232,7 +3342,8 @@
     // ===== 설정 모달 =====
     function openSettingsModal() {
       document.getElementById('settingsModal').classList.add('active');
-      renderCustomCardList();
+      // 기본적으로 카드 탭 표시
+      switchSettingsTab('card');
     }
 
     function closeSettingsModal() {
@@ -3242,14 +3353,18 @@
     function renderCustomCardList() {
       const cards = getCustomCards();
       const list = document.getElementById('customCardList');
+      if (!list) return;
       if (cards.length === 0) {
-        list.innerHTML = '<div style="color:var(--text-muted); font-size:13px; padding:8px;">커스텀 카드가 없습니다</div>';
+        list.innerHTML = '<div style="font-size:12px; color:var(--text-muted); padding:8px;">추가된 커스텀 카드가 없습니다.</div>';
         return;
       }
       list.innerHTML = cards.map(c => `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--bg); border-radius:8px; margin-bottom:6px;">
-          <span style="font-size:14px;">${c}</span>
-          <button onclick="removeCustomCard('${c}')" style="background:var(--danger-light); color:var(--danger); border:none; border-radius:6px; padding:4px 8px; cursor:pointer; font-size:12px;">삭제</button>
+        <div class="custom-item">
+          <div class="custom-item-name">
+            <span>💳</span>
+            <span>${c}</span>
+          </div>
+          <button class="custom-item-del" onclick="removeCustomCard('${c}')">삭제</button>
         </div>
       `).join('');
     }
@@ -3288,6 +3403,95 @@
       }
       if (editCard) {
         editCard.innerHTML = getCardOptions(currentEditCard);
+      }
+    }
+
+    // ===== 설정 탭 전환 =====
+    function switchSettingsTab(tab) {
+      document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.settings-content').forEach(c => c.classList.remove('active'));
+
+      document.querySelector(`.settings-tab[onclick*="${tab}"]`).classList.add('active');
+      document.getElementById(`settings${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active');
+
+      if (tab === 'card') renderCustomCardList();
+      if (tab === 'category') renderCustomCategoryList();
+    }
+
+    // ===== 커스텀 카테고리 관리 =====
+    function renderCustomCategoryList() {
+      const list = document.getElementById('customCategoryList');
+      if (!list) return;
+
+      const customCats = state.customCategories || [];
+      if (customCats.length === 0) {
+        list.innerHTML = '<div style="font-size:12px; color:var(--text-muted); padding:8px;">추가된 커스텀 카테고리가 없습니다.</div>';
+        return;
+      }
+
+      list.innerHTML = customCats.map(c => `
+        <div class="custom-item">
+          <div class="custom-item-name">
+            <span class="custom-item-color" style="background:${c.color}"></span>
+            <span>${c.name}</span>
+          </div>
+          <button class="custom-item-del" onclick="removeCustomCategory('${c.key}')">삭제</button>
+        </div>
+      `).join('');
+    }
+
+    function addCustomCategory() {
+      const nameInput = document.getElementById('newCategoryName');
+      const colorInput = document.getElementById('newCategoryColor');
+      const name = nameInput.value.trim();
+      const color = colorInput.value;
+
+      if (!name) { alert('카테고리명을 입력하세요'); return; }
+
+      // 키 생성 (영문 소문자로 변환하거나 고유 ID 사용)
+      const key = 'custom_' + Date.now();
+
+      // CATEGORIES에 추가
+      CATEGORIES[key] = { name, color };
+
+      // 상태에 저장
+      if (!state.customCategories) state.customCategories = [];
+      state.customCategories.push({ key, name, color });
+
+      // 로컬스토리지에 저장
+      localStorage.setItem('customCategories', JSON.stringify(state.customCategories));
+
+      nameInput.value = '';
+      renderCustomCategoryList();
+    }
+
+    function removeCustomCategory(key) {
+      if (!confirm('이 카테고리를 삭제하시겠습니까?')) return;
+
+      // CATEGORIES에서 제거
+      delete CATEGORIES[key];
+
+      // 상태에서 제거
+      if (state.customCategories) {
+        state.customCategories = state.customCategories.filter(c => c.key !== key);
+        localStorage.setItem('customCategories', JSON.stringify(state.customCategories));
+      }
+
+      renderCustomCategoryList();
+    }
+
+    function loadCustomCategories() {
+      try {
+        const saved = JSON.parse(localStorage.getItem('customCategories'));
+        if (saved && Array.isArray(saved)) {
+          state.customCategories = saved;
+          // CATEGORIES에 추가
+          saved.forEach(c => {
+            CATEGORIES[c.key] = { name: c.name, color: c.color };
+          });
+        }
+      } catch (e) {
+        state.customCategories = [];
       }
     }
 
