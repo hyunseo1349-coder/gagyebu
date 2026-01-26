@@ -543,6 +543,40 @@
       cursor: pointer;
       font-size: 14px;
     }
+    /* 검색창 */
+    .tx-search {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .tx-search input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .tx-search input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    .tx-search input::placeholder {
+      color: var(--text-muted);
+    }
+    .search-clear {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      color: var(--text-muted);
+      padding: 4px;
+    }
+    .search-clear:hover {
+      color: var(--text);
+    }
     
     /* 거래내역 헤더 */
     .tx-header-left { flex: 1; }
@@ -593,6 +627,19 @@
     }
 
     .tx-list { display: flex; flex-direction: column; gap: 8px; }
+    .tx-total-bar {
+      display: none;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      margin-top: 12px;
+      background: var(--primary-light);
+      border-radius: 12px;
+      font-size: 14px;
+    }
+    .tx-total-bar.active { display: flex; }
+    .tx-total-label { color: var(--primary); font-weight: 600; }
+    .tx-total-amount { font-weight: 700; color: var(--primary); font-size: 16px; }
     .tx-item {
       padding: 16px;
       border-radius: 14px;
@@ -1126,7 +1173,7 @@
           <span class="stat-label">📋 총 지출</span>
           <span class="stat-value" id="totalAmt">0원</span>
         </div>
-        <div class="stat-card green">
+        <div class="stat-card green clickable" onclick="filterByMy()">
           <span class="stat-label">💰 내 실제 지출</span>
           <span class="stat-value" id="myAmt">0원</span>
         </div>
@@ -1218,17 +1265,7 @@
             </div>
             <div class="form-group">
               <label class="form-label">카테고리</label>
-              <select class="form-select" id="mCategory">
-                <option value="food">🍽️ 식비</option>
-                <option value="shopping">🛒 쇼핑</option>
-                <option value="transport">🚗 교통</option>
-                <option value="leisure">🎬 여가</option>
-                <option value="medical">🏥 의료</option>
-                <option value="utility">💡 공과금</option>
-                <option value="education">📚 교육</option>
-                <option value="giftcard">🎁 상품권</option>
-                <option value="etc">📦 기타</option>
-              </select>
+              <select class="form-select" id="mCategory"></select>
             </div>
             <div class="form-group full">
               <button class="btn btn-primary" onclick="addManual()">저장하기</button>
@@ -1252,7 +1289,15 @@
             <button class="filter-clear" onclick="clearFilter()">✕</button>
           </div>
         </div>
+        <div class="tx-search">
+          <input type="text" id="txSearchInput" placeholder="🔍 금액 또는 사용처 검색" oninput="handleSearch()">
+          <button class="search-clear" onclick="clearSearch()" id="searchClearBtn" style="display:none;">✕</button>
+        </div>
         <div class="tx-list" id="txList"></div>
+        <div class="tx-total-bar" id="txTotalBar">
+          <span class="tx-total-label">필터 결과 합계</span>
+          <span class="tx-total-amount" id="txTotalAmount">0원</span>
+        </div>
       </div>
     </div>
 
@@ -1499,17 +1544,7 @@
           </div>
           <div class="edit-form-group">
             <label>카테고리</label>
-            <select id="editCategory">
-              <option value="food">🍽️ 식비</option>
-              <option value="shopping">🛒 쇼핑</option>
-              <option value="transport">🚗 교통</option>
-              <option value="leisure">🎬 여가</option>
-              <option value="medical">🏥 의료</option>
-              <option value="utility">💡 공과금</option>
-              <option value="education">📚 교육</option>
-              <option value="giftcard">🎁 상품권</option>
-              <option value="etc">📦 기타</option>
-            </select>
+            <select id="editCategory"></select>
           </div>
         </div>
       </div>
@@ -1604,6 +1639,7 @@
       view: 'monthly',
       filter: null,
       cardFilter: null,   // 카드별 필터
+      searchQuery: '',    // 검색어
       expandedId: null,
       data: {},           // 월별 거래
       mileData: {},       // 월별 마일 입력
@@ -1690,8 +1726,9 @@
       document.getElementById('logoIcon').textContent = state.logoIcon || '가';
       // 테마 적용
       applyTheme();
-      // 카드 셀렉트 업데이트
+      // 카드/카테고리 셀렉트 업데이트
       updateCardSelects();
+      updateCategorySelects();
       render();
     });
 
@@ -1889,9 +1926,20 @@
         if (y < START_YEAR) { months.push({ label: '', living: 0, gift: 0 }); continue; }
         
         const tx = state.data[key(y, m)] || [];
-        let living = 0, gift = 0;
-        tx.forEach(t => { if (t.cat === 'giftcard') gift += t.amt; else living += t.amt; });
-        months.push({ label: m + '월', living, gift });
+        let myLiving = 0, gift = 0;
+        tx.forEach(t => {
+          if (t.cat === 'giftcard') {
+            gift += t.amt;
+          } else {
+            // 내 실제 지출 기준: 정산이 있으면 내 몫, 없으면 전액
+            if (t.split?.members) {
+              myLiving += t.split.members.me || 0;
+            } else {
+              myLiving += t.amt;
+            }
+          }
+        });
+        months.push({ label: m + '월', myLiving, gift });
       }
 
       state.charts.trend = new Chart(ctx, {
@@ -1899,7 +1947,7 @@
         data: {
           labels: months.map(m => m.label),
           datasets: [
-            { label: '생활비', data: months.map(m => m.living), backgroundColor: '#6366F1', borderRadius: 6 },
+            { label: '내 실제 지출', data: months.map(m => m.myLiving), backgroundColor: '#10B981', borderRadius: 6 },
             { label: '상품권', data: months.map(m => m.gift), backgroundColor: '#F59E0B', borderRadius: 6 }
           ]
         },
@@ -1915,7 +1963,14 @@
     function renderTxList(tx) {
       const list = document.getElementById('txList');
       let filtered;
-      if (state.filter === 'family') {
+      if (state.filter === 'my') {
+        // 내 실제 지출이 있는 거래만 필터링 (상품권 제외)
+        filtered = tx.filter(t => {
+          if (t.cat === 'giftcard') return false;
+          if (!t.split?.members) return true; // 정산 없는 거래는 전액 내 지출
+          return t.split.members.hasOwnProperty('me') && t.split.members.me > 0;
+        });
+      } else if (state.filter === 'family') {
         // 가족 멤버가 포함된 거래만 필터링
         filtered = tx.filter(t => {
           if (!t.split?.members) return false;
@@ -1930,18 +1985,50 @@
       } else {
         filtered = tx;
       }
-      
+
+      // 검색어 필터링
+      if (state.searchQuery) {
+        const query = state.searchQuery.toLowerCase();
+        const numQuery = state.searchQuery.replace(/,/g, ''); // 콤마 제거
+        filtered = filtered.filter(t => {
+          // 사용처 검색
+          if (t.store.toLowerCase().includes(query)) return true;
+          // 금액 검색 (숫자로 시작하면 금액 검색)
+          if (/^\d+$/.test(numQuery) && t.amt.toString().includes(numQuery)) return true;
+          // 카드 검색
+          if (t.card.toLowerCase().includes(query)) return true;
+          return false;
+        });
+      }
+
+      // 필터링 합계 표시
+      const totalBar = document.getElementById('txTotalBar');
+      const totalAmount = document.getElementById('txTotalAmount');
+      const isFiltered = state.filter || state.searchQuery;
+
       if (filtered.length === 0) {
         list.innerHTML = '<div class="no-data">거래 내역이 없습니다</div>';
+        totalBar.classList.remove('active');
         return;
+      }
+
+      // 필터가 적용된 경우 합계 표시
+      if (isFiltered) {
+        const sum = filtered.reduce((acc, t) => acc + t.amt, 0);
+        totalAmount.textContent = fmt(sum) + '원';
+        totalBar.classList.add('active');
+      } else {
+        totalBar.classList.remove('active');
       }
 
       list.innerHTML = filtered.map(t => {
         const cat = CATEGORIES[t.cat] || CATEGORIES.etc;
         const isGift = t.cat === 'giftcard';
         const expanded = state.expandedId === t.id;
-        // 나 체크 해제시 0원 표시
-        const myShare = t.split?.members?.hasOwnProperty('me') ? (t.split.members.me || 0) : t.amt;
+        // 나 체크 해제시 0원 표시 (split.members 존재하면 me 키 확인)
+        const myShare = t.split?.members
+          ? (t.split.members.hasOwnProperty('me') ? (t.split.members.me || 0) : 0)
+          : t.amt;
         const memberCount = t.split?.members ? Object.keys(t.split.members).length : 1;
         const hasSplit = memberCount > 1 || (t.split?.members && !t.split.members.hasOwnProperty('me'));
 
@@ -2113,6 +2200,24 @@
       state.cardFilter = null;
       document.getElementById('filterBadge').classList.remove('active');
       renderCardFilterBar();
+      renderTxList(getTx());
+    }
+
+    // ===== 검색 =====
+    function handleSearch() {
+      const input = document.getElementById('txSearchInput');
+      const clearBtn = document.getElementById('searchClearBtn');
+      state.searchQuery = input.value.trim();
+      clearBtn.style.display = state.searchQuery ? 'block' : 'none';
+      renderTxList(getTx());
+    }
+
+    function clearSearch() {
+      const input = document.getElementById('txSearchInput');
+      const clearBtn = document.getElementById('searchClearBtn');
+      input.value = '';
+      state.searchQuery = '';
+      clearBtn.style.display = 'none';
       renderTxList(getTx());
     }
 
@@ -3182,8 +3287,12 @@
       document.getElementById('editStore').value = tx.store;
       document.getElementById('editAmount').value = tx.amt;
       document.getElementById('editDate').value = tx.date;
-      document.getElementById('editCard').value = tx.card;
-      document.getElementById('editCategory').value = tx.cat;
+
+      // 카드/카테고리 옵션 업데이트 후 값 설정
+      const editCard = document.getElementById('editCard');
+      const editCategory = document.getElementById('editCategory');
+      editCard.innerHTML = getCardOptions(tx.card);
+      editCategory.innerHTML = getCategoryOptions(tx.cat);
 
       document.getElementById('editTxModal').classList.add('active');
     }
@@ -3450,6 +3559,34 @@
       updateCardSelects();
     }
 
+    // ===== 카테고리 옵션 생성 =====
+    function getCategoryOptions(selected) {
+      const icons = {
+        food: '🍽️', shopping: '🛒', transport: '🚗', leisure: '🎬',
+        travel: '✈️', medical: '🏥', utility: '💡', education: '📚',
+        giftcard: '🎁', etc: '📦'
+      };
+      return Object.entries(CATEGORIES).map(([key, val]) => {
+        const icon = icons[key] || '📌';
+        const isSelected = selected === key ? 'selected' : '';
+        return `<option value="${key}" ${isSelected}>${icon} ${val.name}</option>`;
+      }).join('');
+    }
+
+    function updateCategorySelects() {
+      const mCategory = document.getElementById('mCategory');
+      const editCategory = document.getElementById('editCategory');
+      const currentMCat = mCategory?.value;
+      const currentEditCat = editCategory?.value;
+
+      if (mCategory) {
+        mCategory.innerHTML = getCategoryOptions(currentMCat || 'food');
+      }
+      if (editCategory) {
+        editCategory.innerHTML = getCategoryOptions(currentEditCat);
+      }
+    }
+
     function updateCardSelects() {
       // 직접 입력 폼의 카드 셀렉트 업데이트
       const mCard = document.getElementById('mCard');
@@ -3522,6 +3659,7 @@
 
       nameInput.value = '';
       renderCustomCategoryList();
+      updateCategorySelects(); // 카테고리 셀렉트 업데이트
     }
 
     function removeCustomCategory(key) {
@@ -3537,6 +3675,7 @@
       }
 
       renderCustomCategoryList();
+      updateCategorySelects(); // 카테고리 셀렉트 업데이트
     }
 
     function loadCustomCategories() {
@@ -3555,6 +3694,15 @@
     }
 
     // ===== 가족 지출 필터링 =====
+    function filterByMy() {
+      state.filter = 'my';
+      state.cardFilter = null;
+      document.getElementById('filterBadge').classList.add('active');
+      document.getElementById('filterText').textContent = '내 실제 지출 필터';
+      renderCardFilterBar();
+      renderTxList(getTx());
+    }
+
     function filterByFamily() {
       state.filter = 'family';
       state.cardFilter = null;
