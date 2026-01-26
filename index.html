@@ -74,6 +74,68 @@
     [data-theme="dark"] .fab {
       background: linear-gradient(135deg, #818CF8 0%, #A78BFA 100%);
     }
+
+    [data-theme="dark"] .nav-btn {
+      background: var(--card);
+      color: var(--text);
+    }
+
+    [data-theme="dark"] .nav-btn:hover:not(:disabled) {
+      background: var(--primary);
+      color: white;
+    }
+
+    [data-theme="dark"] .form-input,
+    [data-theme="dark"] .form-select,
+    [data-theme="dark"] textarea {
+      background: var(--card);
+      border-color: var(--border);
+      color: var(--text);
+    }
+
+    [data-theme="dark"] .split-input {
+      background: var(--card);
+      border-color: var(--border);
+      color: var(--text);
+    }
+
+    [data-theme="dark"] .split-input:disabled {
+      background: var(--bg);
+      color: var(--text-muted);
+    }
+
+    [data-theme="dark"] .mile-input {
+      background: var(--card);
+      color: var(--text);
+    }
+
+    [data-theme="dark"] .mile-suffix {
+      background: var(--border);
+      color: var(--text-secondary);
+    }
+
+    [data-theme="dark"] .parse-result {
+      background: #064E3B;
+      border-color: #059669;
+    }
+
+    [data-theme="dark"] .formula-box {
+      background: #1E3A5F;
+      border-color: #3B82F6;
+      color: #93C5FD;
+    }
+
+    [data-theme="dark"] .formula-box code {
+      background: #1E40AF;
+    }
+
+    [data-theme="dark"] .modal {
+      background: var(--card);
+    }
+
+    [data-theme="dark"] .modal-footer {
+      background: var(--bg);
+    }
     
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { 
@@ -287,7 +349,13 @@
     }
     .chart-wrapper {
       position: relative;
-      height: 200px;
+      height: 220px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .chart-wrapper canvas {
+      max-width: 100%;
     }
     
     /* 입력 섹션 */
@@ -904,12 +972,12 @@
 <body>
   <header class="header">
     <div class="logo">
-      <div class="logo-icon" id="logoIcon" onclick="openSettingsModal()" title="클릭하여 설정">가</div>
+      <div class="logo-icon" id="logoIcon" onclick="openIconModal()" title="클릭하여 아이콘 변경">가</div>
       <span class="logo-text">나만의 가계부</span>
     </div>
-    <div style="display:flex; align-items:center; gap:12px;">
+    <div style="display:flex; align-items:center; gap:8px;">
       <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="다크모드 전환">🌙</button>
-      <div class="header-badge">2026</div>
+      <button class="theme-toggle" onclick="openSettingsModal()" title="설정">⚙️</button>
     </div>
   </header>
 
@@ -968,12 +1036,13 @@
           <div class="input-icon">💬</div>
           <div>
             <div class="input-title">지출 입력</div>
-            <div class="input-desc">카드 문자를 붙여넣거나 직접 입력하세요</div>
+            <div class="input-desc">카드 사용 내역(문자, 명세서, 엑셀)을 붙여넣거나 직접 입력하세요</div>
           </div>
         </div>
         <div class="tabs">
           <button class="tab active" onclick="setTab('quick')">⚡ 빠른 입력</button>
           <button class="tab" onclick="setTab('manual')">✏️ 직접 입력</button>
+          <button class="tab" onclick="setTab('excel')">📊 엑셀 업로드</button>
         </div>
         <div class="tab-content active" id="tabQuick">
           <textarea id="quickInput" placeholder="예시:
@@ -982,6 +1051,19 @@
 네이버페이 32,000원 CGV 01/21"></textarea>
           <div id="parseResult"></div>
           <button class="btn btn-primary" onclick="parseQuickInput()">⚡ 자동 인식</button>
+        </div>
+        <div class="tab-content" id="tabExcel">
+          <div style="text-align:center; padding:20px; border:2px dashed var(--border); border-radius:12px; margin-bottom:12px;">
+            <div style="font-size:40px; margin-bottom:12px;">📊</div>
+            <div style="font-size:14px; font-weight:600; margin-bottom:8px;">엑셀 파일 업로드</div>
+            <div style="font-size:12px; color:var(--text-secondary); margin-bottom:16px;">
+              .xlsx, .xls, .csv 파일 지원<br>
+              (날짜, 가맹점, 금액 열 포함 필수)
+            </div>
+            <input type="file" id="excelFile" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleExcelUpload(event)">
+            <button class="btn btn-primary" style="width:auto; padding:12px 24px;" onclick="document.getElementById('excelFile').click()">📁 파일 선택</button>
+          </div>
+          <div id="excelParseResult"></div>
         </div>
         <div class="tab-content" id="tabManual">
           <div class="form-grid">
@@ -1168,6 +1250,26 @@
     </div>
   </div>
 
+  <!-- 아이콘 설정 모달 -->
+  <div class="modal-overlay" id="iconModal" onclick="closeIconModal()">
+    <div class="modal" style="max-width:320px;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">🎨 아이콘 변경</div>
+        <button class="modal-close" onclick="closeIconModal()">×</button>
+      </div>
+      <div class="modal-body" style="text-align:center;">
+        <div style="width:80px; height:80px; background:linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%); border-radius:20px; display:flex; align-items:center; justify-content:center; margin:0 auto 20px; color:white; font-weight:800; font-size:32px;" id="iconPreview">가</div>
+        <div class="edit-form-group">
+          <label>새 아이콘 (한글, 영어, 이모지)</label>
+          <input type="text" id="iconInput" placeholder="예: HS, 가, 💰" maxlength="4" style="text-align:center; font-size:24px; font-weight:bold;" oninput="document.getElementById('iconPreview').textContent = this.value || '가'">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="saveIcon()">저장</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 설정 모달 -->
   <div class="modal-overlay" id="settingsModal" onclick="closeSettingsModal()">
     <div class="modal" onclick="event.stopPropagation()">
@@ -1176,10 +1278,6 @@
         <button class="modal-close" onclick="closeSettingsModal()">×</button>
       </div>
       <div class="modal-body">
-        <div class="edit-form-group">
-          <label>로고 아이콘 (한글, 영어, 이모지 가능)</label>
-          <input type="text" id="settingsLogoIcon" placeholder="예: HS, 가, 💰" maxlength="4" style="text-align:center; font-size:18px; font-weight:bold;">
-        </div>
         <div class="mile-section">
           <div class="mile-title">💳 커스텀 카드 관리</div>
           <div id="customCardList" style="margin-bottom:12px;"></div>
@@ -1201,7 +1299,7 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-primary" onclick="saveSettings()">저장하기</button>
+        <button class="btn btn-primary" onclick="closeSettingsModal()">닫기</button>
       </div>
     </div>
   </div>
@@ -1526,21 +1624,26 @@
         },
         plugins: [ChartDataLabels],
         options: {
-          cutout: '60%',
+          cutout: '55%',
+          maintainAspectRatio: false,
+          layout: {
+            padding: { right: 10 }
+          },
           plugins: {
             legend: {
-              position: 'bottom',
+              position: 'right',
+              align: 'center',
               labels: {
                 boxWidth: 12,
-                padding: 8,
-                font: { size: 11 },
+                padding: 6,
+                font: { size: 10 },
                 generateLabels: function(chart) {
                   const data = chart.data;
                   return data.labels.map((label, i) => {
                     const value = data.datasets[0].data[i];
-                    const percent = ((value / total) * 100).toFixed(1);
+                    const percent = ((value / total) * 100).toFixed(0);
                     return {
-                      text: `${label} ${fmtShort(value)}원 (${percent}%)`,
+                      text: `${label} ${percent}%`,
                       fillStyle: data.datasets[0].backgroundColor[i],
                       strokeStyle: data.datasets[0].backgroundColor[i],
                       lineWidth: 0,
@@ -1552,10 +1655,10 @@
             },
             datalabels: {
               color: '#fff',
-              font: { weight: 'bold', size: 11 },
+              font: { weight: 'bold', size: 10 },
               formatter: (value, context) => {
                 const percent = ((value / total) * 100).toFixed(0);
-                return percent >= 5 ? percent + '%' : '';
+                return percent >= 8 ? fmtShort(value) : '';
               }
             },
             tooltip: {
@@ -1810,14 +1913,210 @@
 
     // ===== 탭 =====
     function setTab(tab) {
-      document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === (tab === 'quick' ? 0 : 1)));
+      const tabs = ['quick', 'manual', 'excel'];
+      document.querySelectorAll('.tabs .tab').forEach((t, i) => t.classList.toggle('active', tabs[i] === tab));
       document.getElementById('tabQuick').classList.toggle('active', tab === 'quick');
       document.getElementById('tabManual').classList.toggle('active', tab === 'manual');
+      document.getElementById('tabExcel').classList.toggle('active', tab === 'excel');
     }
 
     function openManualTab() {
       setTab('manual');
       window.scrollTo({ top: document.querySelector('.input-section').offsetTop - 80, behavior: 'smooth' });
+    }
+
+    // ===== 엑셀 업로드 =====
+    function handleExcelUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          let rows = [];
+          const fileName = file.name.toLowerCase();
+
+          if (fileName.endsWith('.csv')) {
+            // CSV 파싱
+            const text = e.target.result;
+            rows = parseCSV(text);
+          } else {
+            // Excel 파싱 (간단한 CSV 변환 시도)
+            alert('Excel 파일(.xlsx, .xls)은 CSV로 변환 후 업로드해주세요.\n\n방법: Excel에서 파일 > 다른 이름으로 저장 > CSV 형식 선택');
+            event.target.value = '';
+            return;
+          }
+
+          if (rows.length < 2) {
+            alert('데이터가 없거나 형식이 올바르지 않습니다.');
+            return;
+          }
+
+          // 헤더 분석
+          const header = rows[0].map(h => h.toLowerCase().trim());
+          const dateIdx = header.findIndex(h => h.includes('날짜') || h.includes('date') || h.includes('일자'));
+          const storeIdx = header.findIndex(h => h.includes('가맹점') || h.includes('상호') || h.includes('store') || h.includes('내역') || h.includes('사용처'));
+          const amtIdx = header.findIndex(h => h.includes('금액') || h.includes('amount') || h.includes('결제') || h.includes('이용금액'));
+          const cardIdx = header.findIndex(h => h.includes('카드') || h.includes('card') || h.includes('결제수단'));
+
+          if (amtIdx === -1) {
+            alert('금액 열을 찾을 수 없습니다.\n열 이름에 "금액", "이용금액", "결제금액" 등이 포함되어야 합니다.');
+            return;
+          }
+
+          parsedTx = [];
+          for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (row.length <= amtIdx) continue;
+
+            const amtStr = String(row[amtIdx]).replace(/[^0-9\-]/g, '');
+            const amt = Math.abs(parseInt(amtStr) || 0);
+            if (amt < 100) continue;
+
+            let date = '';
+            if (dateIdx >= 0 && row[dateIdx]) {
+              date = parseExcelDate(String(row[dateIdx]));
+            }
+            if (!date) {
+              const today = new Date();
+              date = String(today.getMonth() + 1).padStart(2, '0') + '/' + String(today.getDate()).padStart(2, '0');
+            }
+
+            const store = (storeIdx >= 0 && row[storeIdx]) ? String(row[storeIdx]).trim() : '기타';
+            const card = (cardIdx >= 0 && row[cardIdx]) ? String(row[cardIdx]).trim() : '카드';
+
+            // 카테고리 자동 분류
+            const cat = detectCategory(store);
+
+            parsedTx.push({ id: uid(), date, store, card, cat, amt, split: { members: { me: amt } } });
+          }
+
+          if (parsedTx.length === 0) {
+            alert('인식된 거래가 없습니다.');
+            return;
+          }
+
+          document.getElementById('excelParseResult').innerHTML = `
+            <div class="parse-result">
+              <div class="parse-title">✅ ${parsedTx.length}건 인식</div>
+              ${parsedTx.slice(0, 10).map(t => `
+                <div class="parse-item">
+                  <span>${t.date} ${t.store}</span>
+                  <span class="parse-amount">${fmt(t.amt)}원</span>
+                </div>`).join('')}
+              ${parsedTx.length > 10 ? `<div style="text-align:center; padding:8px; color:var(--text-secondary);">... 외 ${parsedTx.length - 10}건</div>` : ''}
+              <div class="parse-actions">
+                <button class="btn btn-secondary" onclick="cancelExcelParse()">취소</button>
+                <button class="btn btn-primary" onclick="confirmExcelParse()">추가</button>
+              </div>
+            </div>`;
+
+        } catch (err) {
+          alert('파일 처리 중 오류: ' + err.message);
+        }
+      };
+
+      if (file.name.toLowerCase().endsWith('.csv')) {
+        reader.readAsText(file, 'UTF-8');
+      } else {
+        reader.readAsArrayBuffer(file);
+      }
+      event.target.value = '';
+    }
+
+    function parseCSV(text) {
+      const lines = text.split(/\r?\n/);
+      return lines.map(line => {
+        const result = [];
+        let current = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            result.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        result.push(current.trim());
+        return result;
+      }).filter(row => row.some(cell => cell));
+    }
+
+    function parseExcelDate(dateStr) {
+      // 다양한 날짜 형식 처리
+      const patterns = [
+        /(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/, // YYYY-MM-DD
+        /(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/, // MM-DD-YYYY or DD-MM-YYYY
+        /(\d{1,2})[\/\-\.](\d{1,2})/                  // MM-DD or MM/DD
+      ];
+
+      for (const pattern of patterns) {
+        const match = dateStr.match(pattern);
+        if (match) {
+          if (match.length === 4) {
+            // 연도 포함
+            const parts = match.slice(1).map(Number);
+            let month, day;
+            if (parts[0] > 100) { // YYYY-MM-DD
+              month = parts[1];
+              day = parts[2];
+            } else { // MM-DD-YYYY
+              month = parts[0];
+              day = parts[1];
+            }
+            if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+              return String(month).padStart(2, '0') + '/' + String(day).padStart(2, '0');
+            }
+          } else {
+            // MM-DD
+            const month = parseInt(match[1]);
+            const day = parseInt(match[2]);
+            if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+              return String(month).padStart(2, '0') + '/' + String(day).padStart(2, '0');
+            }
+          }
+        }
+      }
+      return '';
+    }
+
+    function detectCategory(store) {
+      const text = store.toLowerCase();
+      const patterns = [
+        [/스타벅스|커피|카페|베이커리|식당|치킨|피자|배달|마트|편의점|음식/i, 'food'],
+        [/주유|충전|택시|버스|지하철|교통|주차/i, 'transport'],
+        [/cgv|메가박스|영화|넷플릭스|게임|노래방|헬스/i, 'leisure'],
+        [/병원|약국|의료|치과|안과/i, 'medical'],
+        [/학원|교육|강의|도서/i, 'education'],
+        [/전기|가스|수도|통신|인터넷/i, 'utility'],
+        [/상품권/i, 'giftcard'],
+        [/쿠팡|네이버|쇼핑|백화점|아울렛/i, 'shopping']
+      ];
+      for (const [p, c] of patterns) {
+        if (p.test(text)) return c;
+      }
+      return 'etc';
+    }
+
+    function confirmExcelParse() {
+      const k = key(state.year, state.month);
+      if (!state.data[k]) state.data[k] = [];
+      parsedTx.forEach(t => state.data[k].unshift(t));
+      save();
+
+      document.getElementById('excelParseResult').innerHTML = '';
+      parsedTx = [];
+      render();
+      alert(`${state.data[k].length}건이 추가되었습니다!`);
+    }
+
+    function cancelExcelParse() {
+      parsedTx = [];
+      document.getElementById('excelParseResult').innerHTML = '';
     }
 
     // ===== 빠른 입력 =====
@@ -2179,20 +2478,26 @@
         },
         plugins: [ChartDataLabels],
         options: {
-          cutout: '60%',
+          cutout: '55%',
+          maintainAspectRatio: false,
+          layout: {
+            padding: { right: 10 }
+          },
           plugins: {
             legend: {
-              position: 'bottom',
+              position: 'right',
+              align: 'center',
               labels: {
                 boxWidth: 12,
-                font: { size: 11 },
+                padding: 6,
+                font: { size: 10 },
                 generateLabels: function(chart) {
                   const data = chart.data;
                   return data.labels.map((label, i) => {
                     const value = data.datasets[0].data[i];
-                    const percent = ((value / total) * 100).toFixed(1);
+                    const percent = ((value / total) * 100).toFixed(0);
                     return {
-                      text: `${label} ${fmtShort(value)}원 (${percent}%)`,
+                      text: `${label} ${percent}%`,
                       fillStyle: data.datasets[0].backgroundColor[i],
                       strokeStyle: data.datasets[0].backgroundColor[i],
                       lineWidth: 0,
@@ -2204,10 +2509,10 @@
             },
             datalabels: {
               color: '#fff',
-              font: { weight: 'bold', size: 11 },
+              font: { weight: 'bold', size: 10 },
               formatter: (value, context) => {
                 const percent = ((value / total) * 100).toFixed(0);
-                return percent >= 5 ? percent + '%' : '';
+                return percent >= 8 ? fmtShort(value) : '';
               }
             },
             tooltip: {
@@ -2459,24 +2764,33 @@
       return getAllCards().map(c => `<option ${c === selected ? 'selected' : ''}>${c}</option>`).join('');
     }
 
+    // ===== 아이콘 모달 =====
+    function openIconModal() {
+      document.getElementById('iconModal').classList.add('active');
+      document.getElementById('iconInput').value = state.logoIcon || '가';
+      document.getElementById('iconPreview').textContent = state.logoIcon || '가';
+    }
+
+    function closeIconModal() {
+      document.getElementById('iconModal').classList.remove('active');
+    }
+
+    function saveIcon() {
+      const icon = document.getElementById('iconInput').value.trim() || '가';
+      state.logoIcon = icon;
+      document.getElementById('logoIcon').textContent = icon;
+      save();
+      closeIconModal();
+    }
+
+    // ===== 설정 모달 =====
     function openSettingsModal() {
       document.getElementById('settingsModal').classList.add('active');
-      document.getElementById('settingsLogoIcon').value = state.logoIcon || '가';
       renderCustomCardList();
     }
 
     function closeSettingsModal() {
       document.getElementById('settingsModal').classList.remove('active');
-    }
-
-    function saveSettings() {
-      const icon = document.getElementById('settingsLogoIcon').value.trim() || '가';
-      state.logoIcon = icon;
-      document.getElementById('logoIcon').textContent = icon;
-      save();
-      closeSettingsModal();
-      updateCardSelects();
-      render();
     }
 
     function renderCustomCardList() {
