@@ -26,6 +26,54 @@
       --text-secondary: #6B7280;
       --text-muted: #9CA3AF;
     }
+
+    /* 다크모드 */
+    [data-theme="dark"] {
+      --primary: #818CF8;
+      --primary-light: #312E81;
+      --success: #34D399;
+      --success-light: #064E3B;
+      --warning: #FBBF24;
+      --warning-light: #78350F;
+      --danger: #F87171;
+      --danger-light: #7F1D1D;
+      --pink: #F472B6;
+      --pink-light: #831843;
+      --bg: #111827;
+      --card: #1F2937;
+      --border: #374151;
+      --text: #F9FAFB;
+      --text-secondary: #D1D5DB;
+      --text-muted: #9CA3AF;
+    }
+
+    [data-theme="dark"] .logo-icon {
+      background: linear-gradient(135deg, #818CF8 0%, #A78BFA 100%);
+    }
+
+    [data-theme="dark"] .tx-date {
+      background: var(--bg);
+    }
+
+    [data-theme="dark"] .split-row {
+      background: var(--bg);
+    }
+
+    [data-theme="dark"] .mile-info-box {
+      background: linear-gradient(135deg, #1E3A5F 0%, #1E40AF 100%);
+    }
+
+    [data-theme="dark"] .mile-result {
+      background: linear-gradient(135deg, #78350F 0%, #92400E 100%);
+    }
+
+    [data-theme="dark"] .avg-card {
+      background: linear-gradient(135deg, #4C1D95 0%, #5B21B6 100%);
+    }
+
+    [data-theme="dark"] .fab {
+      background: linear-gradient(135deg, #818CF8 0%, #A78BFA 100%);
+    }
     
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { 
@@ -64,11 +112,32 @@
       color: white;
       font-weight: 800;
       font-size: 16px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .logo-icon:hover {
+      transform: scale(1.05);
     }
     .logo-text {
       font-weight: 800;
       font-size: 18px;
       color: var(--text);
+    }
+    .theme-toggle {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      font-size: 18px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .theme-toggle:hover {
+      background: var(--primary-light);
     }
     .header-badge {
       font-size: 12px;
@@ -835,10 +904,13 @@
 <body>
   <header class="header">
     <div class="logo">
-      <div class="logo-icon">가</div>
+      <div class="logo-icon" id="logoIcon" onclick="openSettingsModal()" title="클릭하여 설정">가</div>
       <span class="logo-text">나만의 가계부</span>
     </div>
-    <div class="header-badge">2026 Edition</div>
+    <div style="display:flex; align-items:center; gap:12px;">
+      <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="다크모드 전환">🌙</button>
+      <div class="header-badge">2026</div>
+    </div>
   </header>
 
   <main class="main">
@@ -867,14 +939,14 @@
           <span class="stat-label">💰 내 실제 지출</span>
           <span class="stat-value" id="myAmt">0원</span>
         </div>
-        <div class="stat-card pink">
+        <div class="stat-card pink clickable" onclick="filterByFamily()">
           <span class="stat-label">👨‍👩‍👧 가족 지출</span>
           <span class="stat-value" id="familyAmt">0원</span>
+          <span class="stat-hint" style="color: var(--pink);">👆 가족 내역 보기</span>
         </div>
         <div class="stat-card yellow clickable" onclick="openMileModal()">
-          <span class="stat-label">🎁 상품권</span>
+          <span class="stat-label">🎁 상품권 <span style="font-size:10px; opacity:0.8;">👆 마일단가</span></span>
           <span class="stat-value" id="giftAmt">0원</span>
-          <span class="stat-hint">👆 마일단가 계산</span>
         </div>
       </div>
 
@@ -1054,6 +1126,8 @@
                 <span class="mile-suffix">원</span>
               </div>
             </div>
+          </div>
+          <div class="mile-input-row">
             <div class="mile-input-group">
               <label>카드 혜택</label>
               <div class="mile-input-wrapper">
@@ -1090,6 +1164,44 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-primary" onclick="closeMileModal()">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 설정 모달 -->
+  <div class="modal-overlay" id="settingsModal" onclick="closeSettingsModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">⚙️ 설정</div>
+        <button class="modal-close" onclick="closeSettingsModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="edit-form-group">
+          <label>로고 아이콘 (한글, 영어, 이모지 가능)</label>
+          <input type="text" id="settingsLogoIcon" placeholder="예: HS, 가, 💰" maxlength="4" style="text-align:center; font-size:18px; font-weight:bold;">
+        </div>
+        <div class="mile-section">
+          <div class="mile-title">💳 커스텀 카드 관리</div>
+          <div id="customCardList" style="margin-bottom:12px;"></div>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="newCardName" class="form-input" placeholder="새 카드명 (예: 현대150)" style="flex:1;">
+            <button class="btn btn-primary" style="width:auto; padding:10px 16px;" onclick="addCustomCard()">추가</button>
+          </div>
+        </div>
+        <div class="mile-section">
+          <div class="mile-title">💾 데이터 백업/복원</div>
+          <div style="display:flex; gap:8px; margin-bottom:8px;">
+            <button class="btn btn-secondary" style="flex:1;" onclick="exportData()">📤 내보내기</button>
+            <button class="btn btn-secondary" style="flex:1;" onclick="document.getElementById('importFile').click()">📥 가져오기</button>
+            <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importData(event)">
+          </div>
+          <div style="font-size:11px; color:var(--text-muted);">
+            JSON 파일로 모든 데이터를 백업하고 복원할 수 있습니다.
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="saveSettings()">저장하기</button>
       </div>
     </div>
   </div>
@@ -1259,7 +1371,10 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         data: state.data,
         mileData: state.mileData,
-        yearlyMileData: state.yearlyMileData
+        yearlyMileData: state.yearlyMileData,
+        customCards: state.customCards,
+        logoIcon: state.logoIcon,
+        theme: state.theme
       }));
     }
 
@@ -1270,6 +1385,9 @@
           state.data = s.data || {};
           state.mileData = s.mileData || {};
           state.yearlyMileData = s.yearlyMileData || {};
+          state.customCards = s.customCards || [];
+          state.logoIcon = s.logoIcon || '가';
+          state.theme = s.theme || 'light';
         }
       } catch(e) { console.error(e); }
       
@@ -1295,6 +1413,12 @@
         state.month = today.getMonth() + 1;
       }
       document.getElementById('mDate').value = today.toISOString().split('T')[0];
+      // 로고 아이콘 설정 적용
+      document.getElementById('logoIcon').textContent = state.logoIcon || '가';
+      // 테마 적용
+      applyTheme();
+      // 카드 셀렉트 업데이트
+      updateCardSelects();
       render();
     });
 
@@ -1492,7 +1616,18 @@
 
     function renderTxList(tx) {
       const list = document.getElementById('txList');
-      const filtered = state.filter ? tx.filter(t => t.cat === state.filter) : tx;
+      let filtered;
+      if (state.filter === 'family') {
+        // 가족 멤버가 포함된 거래만 필터링
+        filtered = tx.filter(t => {
+          if (!t.split?.members) return false;
+          return FAMILY_IDS.some(id => t.split.members.hasOwnProperty(id) && t.split.members[id] > 0);
+        });
+      } else if (state.filter) {
+        filtered = tx.filter(t => t.cat === state.filter);
+      } else {
+        filtered = tx;
+      }
       
       if (filtered.length === 0) {
         list.innerHTML = '<div class="no-data">거래 내역이 없습니다</div>';
@@ -1522,6 +1657,21 @@
               <div class="tx-amount ${isGift ? 'giftcard' : ''}">${fmt(t.amt)}원</div>
             </div>
             <div class="split-panel" onclick="event.stopPropagation()">
+              <div class="split-title">🏷️ 분류 수정</div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px;">
+                <div>
+                  <label style="font-size:11px; color:var(--text-secondary);">카테고리</label>
+                  <select class="form-select" style="padding:8px; font-size:13px;" onchange="updateTxCategory('${t.id}', this.value)">
+                    ${Object.entries(CATEGORIES).map(([k,v]) => `<option value="${k}" ${t.cat === k ? 'selected' : ''}>${v.name}</option>`).join('')}
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size:11px; color:var(--text-secondary);">결제수단</label>
+                  <select class="form-select" style="padding:8px; font-size:13px;" onchange="updateTxCard('${t.id}', this.value)">
+                    ${getCardOptions(t.card)}
+                  </select>
+                </div>
+              </div>
               <div class="split-title">👥 정산 설정</div>
               <div class="split-members">${renderSplitMembers(t)}</div>
               <div id="splitErr_${t.id}"></div>
@@ -2288,6 +2438,208 @@
       state.expandedId = null;
       render();
       alert('삭제되었습니다!');
+    }
+
+    // ===== 설정 관련 =====
+    const DEFAULT_CARDS = [
+      '신한카드', '삼성카드', '현대카드', 'KB국민카드', '롯데카드',
+      '우리카드', '하나카드', 'NH농협카드', 'BC카드', 'IBK기업은행',
+      '네이버페이', '카카오페이', '토스', '페이코', '현금', '계좌이체'
+    ];
+
+    function getCustomCards() {
+      return state.customCards || [];
+    }
+
+    function getAllCards() {
+      return [...DEFAULT_CARDS, ...getCustomCards()];
+    }
+
+    function getCardOptions(selected) {
+      return getAllCards().map(c => `<option ${c === selected ? 'selected' : ''}>${c}</option>`).join('');
+    }
+
+    function openSettingsModal() {
+      document.getElementById('settingsModal').classList.add('active');
+      document.getElementById('settingsLogoIcon').value = state.logoIcon || '가';
+      renderCustomCardList();
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('settingsModal').classList.remove('active');
+    }
+
+    function saveSettings() {
+      const icon = document.getElementById('settingsLogoIcon').value.trim() || '가';
+      state.logoIcon = icon;
+      document.getElementById('logoIcon').textContent = icon;
+      save();
+      closeSettingsModal();
+      updateCardSelects();
+      render();
+    }
+
+    function renderCustomCardList() {
+      const cards = getCustomCards();
+      const list = document.getElementById('customCardList');
+      if (cards.length === 0) {
+        list.innerHTML = '<div style="color:var(--text-muted); font-size:13px; padding:8px;">커스텀 카드가 없습니다</div>';
+        return;
+      }
+      list.innerHTML = cards.map(c => `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--bg); border-radius:8px; margin-bottom:6px;">
+          <span style="font-size:14px;">${c}</span>
+          <button onclick="removeCustomCard('${c}')" style="background:var(--danger-light); color:var(--danger); border:none; border-radius:6px; padding:4px 8px; cursor:pointer; font-size:12px;">삭제</button>
+        </div>
+      `).join('');
+    }
+
+    function addCustomCard() {
+      const input = document.getElementById('newCardName');
+      const name = input.value.trim();
+      if (!name) { alert('카드명을 입력하세요'); return; }
+      if (getAllCards().includes(name)) { alert('이미 존재하는 카드입니다'); return; }
+
+      if (!state.customCards) state.customCards = [];
+      state.customCards.push(name);
+      save();
+      input.value = '';
+      renderCustomCardList();
+      updateCardSelects();
+    }
+
+    function removeCustomCard(name) {
+      if (!state.customCards) return;
+      state.customCards = state.customCards.filter(c => c !== name);
+      save();
+      renderCustomCardList();
+      updateCardSelects();
+    }
+
+    function updateCardSelects() {
+      // 직접 입력 폼의 카드 셀렉트 업데이트
+      const mCard = document.getElementById('mCard');
+      const editCard = document.getElementById('editCard');
+      const currentMCard = mCard?.value;
+      const currentEditCard = editCard?.value;
+
+      if (mCard) {
+        mCard.innerHTML = getCardOptions(currentMCard);
+      }
+      if (editCard) {
+        editCard.innerHTML = getCardOptions(currentEditCard);
+      }
+    }
+
+    // ===== 가족 지출 필터링 =====
+    function filterByFamily() {
+      state.filter = 'family';
+      document.getElementById('filterBadge').classList.add('active');
+      document.getElementById('filterText').textContent = '가족 지출 필터';
+      renderTxList(getTx());
+    }
+
+    // ===== 카테고리/카드 즉시 수정 =====
+    function updateTxCategory(tid, cat) {
+      const tx = getTx().find(t => t.id === tid);
+      if (!tx) return;
+      tx.cat = cat;
+      save();
+      render();
+    }
+
+    function updateTxCard(tid, card) {
+      const tx = getTx().find(t => t.id === tid);
+      if (!tx) return;
+      tx.card = card;
+      save();
+      render();
+    }
+
+    // ===== 다크모드 =====
+    function toggleTheme() {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const newTheme = isDark ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', newTheme);
+      document.getElementById('themeToggle').textContent = newTheme === 'dark' ? '☀️' : '🌙';
+      state.theme = newTheme;
+      save();
+
+      // 차트 다시 렌더링 (색상 업데이트)
+      render();
+    }
+
+    function applyTheme() {
+      const theme = state.theme || 'light';
+      document.documentElement.setAttribute('data-theme', theme);
+      document.getElementById('themeToggle').textContent = theme === 'dark' ? '☀️' : '🌙';
+    }
+
+    // ===== 데이터 내보내기/가져오기 =====
+    function exportData() {
+      const exportObj = {
+        version: '1.0',
+        exportDate: new Date().toISOString(),
+        data: state.data,
+        mileData: state.mileData,
+        yearlyMileData: state.yearlyMileData,
+        customCards: state.customCards,
+        logoIcon: state.logoIcon,
+        theme: state.theme
+      };
+
+      const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `가계부_백업_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      alert('데이터가 내보내기되었습니다!');
+    }
+
+    function importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const importObj = JSON.parse(e.target.result);
+
+          if (!importObj.data) {
+            alert('유효하지 않은 백업 파일입니다.');
+            return;
+          }
+
+          if (!confirm('기존 데이터를 덮어쓰시겠습니까?\n(현재 데이터가 모두 교체됩니다)')) {
+            return;
+          }
+
+          state.data = importObj.data || {};
+          state.mileData = importObj.mileData || {};
+          state.yearlyMileData = importObj.yearlyMileData || {};
+          state.customCards = importObj.customCards || [];
+          state.logoIcon = importObj.logoIcon || '가';
+          state.theme = importObj.theme || 'light';
+
+          save();
+          document.getElementById('logoIcon').textContent = state.logoIcon;
+          applyTheme();
+          updateCardSelects();
+          render();
+
+          alert('데이터가 성공적으로 복원되었습니다!');
+          closeSettingsModal();
+        } catch (err) {
+          alert('파일을 읽는 중 오류가 발생했습니다: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = '';
     }
   </script>
 </body>
