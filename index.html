@@ -1563,27 +1563,38 @@
       </div>
       <div class="modal-body">
         <div class="mile-section">
-          <div class="mile-title">📊 연간 누계</div>
+          <div class="mile-title">📊 연간 누계 (월별 합산)</div>
           <div class="mile-info-box">
             <div class="mile-row"><span class="mile-label">상품권 총액</span><span class="mile-value" id="yMileGift">0원</span></div>
             <div class="mile-row"><span class="mile-label">현금화 누계</span><span class="mile-value" id="yMileCash">0원</span></div>
             <div class="mile-row"><span class="mile-label">마일 누계</span><span class="mile-value" id="yMileMile">0 마일</span></div>
+            <div class="mile-row"><span class="mile-label">연회비 누계</span><span class="mile-value" id="yMileFee">0원</span></div>
+            <div class="mile-row"><span class="mile-label">카드혜택 누계</span><span class="mile-value" id="yMileBenefit">0원</span></div>
           </div>
         </div>
         <div class="mile-section">
-          <div class="mile-title">💳 연간 카드 비용</div>
+          <div class="mile-title">📝 기타 (연간 추가 입력)</div>
           <div class="mile-input-row">
             <div class="mile-input-group">
-              <label>연회비 합계</label>
+              <label>기타 마일리지</label>
               <div class="mile-input-wrapper">
-                <input type="number" class="mile-input" id="yFee" oninput="calcYearlyMile()">
+                <input type="number" class="mile-input" id="yExtraMile" oninput="calcYearlyMile()" placeholder="분모+">
+                <span class="mile-suffix">마일</span>
+              </div>
+            </div>
+          </div>
+          <div class="mile-input-row">
+            <div class="mile-input-group">
+              <label>기타 비용</label>
+              <div class="mile-input-wrapper">
+                <input type="number" class="mile-input" id="yExtraCost" oninput="calcYearlyMile()" placeholder="분자+">
                 <span class="mile-suffix">원</span>
               </div>
             </div>
             <div class="mile-input-group">
-              <label>혜택 합계</label>
+              <label>기타 혜택</label>
               <div class="mile-input-wrapper">
-                <input type="number" class="mile-input" id="yBenefit" oninput="calcYearlyMile()">
+                <input type="number" class="mile-input" id="yExtraBenefit" oninput="calcYearlyMile()" placeholder="분자-">
                 <span class="mile-suffix">원</span>
               </div>
             </div>
@@ -1593,8 +1604,13 @@
           <div class="mile-row"><span class="mile-label">연간 상품권</span><span class="mile-value" id="yrPurchase">0원</span></div>
           <div class="mile-row"><span class="mile-label">(-) 현금화</span><span class="mile-value" id="yrCash">0원</span></div>
           <div class="mile-row"><span class="mile-label">(+) 연회비</span><span class="mile-value" id="yrFee">0원</span></div>
-          <div class="mile-row"><span class="mile-label">(-) 혜택</span><span class="mile-value" id="yrBenefit">0원</span></div>
+          <div class="mile-row"><span class="mile-label">(-) 카드혜택</span><span class="mile-value" id="yrBenefit">0원</span></div>
+          <div class="mile-row"><span class="mile-label">(+) 기타 비용</span><span class="mile-value" id="yrExtraCost">0원</span></div>
+          <div class="mile-row"><span class="mile-label">(-) 기타 혜택</span><span class="mile-value" id="yrExtraBenefit">0원</span></div>
           <div class="mile-row"><span class="mile-label">= 실제 비용</span><span class="mile-value" id="yrActual">0원</span></div>
+          <div class="mile-row" style="border-top: 1px dashed var(--border); padding-top: 8px; margin-top: 4px;">
+            <span class="mile-label">총 마일 (월별 + 기타)</span><span class="mile-value" id="yrTotalMile">0 마일</span>
+          </div>
           <div class="mile-row total">
             <span class="mile-label">🎯 연간 마일단가</span>
             <span class="mile-value highlight" id="yrPerMile">- 원/마일</span>
@@ -3030,16 +3046,27 @@
     function renderYearly() {
       let yTotal = 0, yMy = 0, yGift = 0;
       const monthlyStats = [];
-      const yCatTotals = {};
+      const yCatTotals = {};  // 카테고리별 내 실제 지출
 
       for (let m = 1; m <= 12; m++) {
         const tx = state.data[key(state.year, m)] || [];
         let total = 0, my = 0, gift = 0;
         tx.forEach(t => {
           total += t.amt;
-          if (t.cat === 'giftcard') gift += t.amt;
-          else yCatTotals[t.cat] = (yCatTotals[t.cat] || 0) + t.amt;
-          if (t.split?.members) my += t.split.members.me || 0;
+          if (t.cat === 'giftcard') {
+            gift += t.amt;
+          } else {
+            // 내 실제 지출 계산: 정산 없으면 전액, 정산 있으면 me 금액
+            let myShare = 0;
+            if (t.split?.members) {
+              myShare = t.split.members.me || 0;
+            } else {
+              myShare = t.amt;  // 정산 없으면 전액 내 지출
+            }
+            my += myShare;
+            // 카테고리별 내 실제 지출
+            yCatTotals[t.cat] = (yCatTotals[t.cat] || 0) + myShare;
+          }
         });
         monthlyStats.push({ m, total, my, gift });
         yTotal += total; yMy += my; yGift += gift;
@@ -3226,56 +3253,78 @@
     function openYearlyMileModal() {
       document.getElementById('yearlyMileModal').classList.add('active');
       document.getElementById('yMileTitle').textContent = `✈️ ${state.year}년 연간 마일단가`;
-      
-      let yGc = 0, yCash = 0, yMile = 0;
+
+      // 월별 데이터 합산
+      let yGc = 0, yCash = 0, yMile = 0, yFee = 0, yBenefit = 0;
       for (let m = 1; m <= 12; m++) {
         const tx = state.data[key(state.year, m)] || [];
         tx.forEach(t => { if (t.cat === 'giftcard') yGc += t.amt; });
         const md = state.mileData[key(state.year, m)] || {};
         yCash += md.cash || 0;
         yMile += md.mile || 0;
+        yFee += md.fee || 0;
+        yBenefit += md.benefit || 0;
       }
 
+      // 연간 누계 표시
       document.getElementById('yMileGift').textContent = fmt(yGc) + '원';
       document.getElementById('yMileCash').textContent = fmt(yCash) + '원';
       document.getElementById('yMileMile').textContent = fmt(yMile) + ' 마일';
+      document.getElementById('yMileFee').textContent = fmt(yFee) + '원';
+      document.getElementById('yMileBenefit').textContent = fmt(yBenefit) + '원';
 
+      // 기타 항목 로드
       const s = state.yearlyMileData[state.year] || {};
-      document.getElementById('yFee').value = s.fee || '';
-      document.getElementById('yBenefit').value = s.benefit || '';
+      document.getElementById('yExtraMile').value = s.extraMile || '';
+      document.getElementById('yExtraCost').value = s.extraCost || '';
+      document.getElementById('yExtraBenefit').value = s.extraBenefit || '';
       calcYearlyMile();
     }
 
     function closeYearlyMileModal() {
       state.yearlyMileData[state.year] = {
-        fee: parseInt(document.getElementById('yFee').value) || 0,
-        benefit: parseInt(document.getElementById('yBenefit').value) || 0
+        extraMile: parseInt(document.getElementById('yExtraMile').value) || 0,
+        extraCost: parseInt(document.getElementById('yExtraCost').value) || 0,
+        extraBenefit: parseInt(document.getElementById('yExtraBenefit').value) || 0
       };
       save();
       document.getElementById('yearlyMileModal').classList.remove('active');
     }
 
     function calcYearlyMile() {
-      let yGc = 0, yCash = 0, yMile = 0;
+      // 월별 데이터 합산
+      let yGc = 0, yCash = 0, yMile = 0, yFee = 0, yBenefit = 0;
       for (let m = 1; m <= 12; m++) {
         const tx = state.data[key(state.year, m)] || [];
         tx.forEach(t => { if (t.cat === 'giftcard') yGc += t.amt; });
         const md = state.mileData[key(state.year, m)] || {};
         yCash += md.cash || 0;
         yMile += md.mile || 0;
+        yFee += md.fee || 0;
+        yBenefit += md.benefit || 0;
       }
-      const fee = parseInt(document.getElementById('yFee').value) || 0;
-      const benefit = parseInt(document.getElementById('yBenefit').value) || 0;
-      const actual = yGc - yCash + fee - benefit;
+
+      // 기타 항목
+      const extraMile = parseInt(document.getElementById('yExtraMile').value) || 0;
+      const extraCost = parseInt(document.getElementById('yExtraCost').value) || 0;
+      const extraBenefit = parseInt(document.getElementById('yExtraBenefit').value) || 0;
+
+      // 계산: 실제 비용 = 상품권 - 현금화 + 연회비 - 카드혜택 + 기타비용 - 기타혜택
+      const actual = yGc - yCash + yFee - yBenefit + extraCost - extraBenefit;
+      // 총 마일 = 월별 마일 + 기타 마일
+      const totalMile = yMile + extraMile;
 
       document.getElementById('yrPurchase').textContent = fmt(yGc) + '원';
       document.getElementById('yrCash').textContent = fmt(yCash) + '원';
-      document.getElementById('yrFee').textContent = fmt(fee) + '원';
-      document.getElementById('yrBenefit').textContent = fmt(benefit) + '원';
+      document.getElementById('yrFee').textContent = fmt(yFee) + '원';
+      document.getElementById('yrBenefit').textContent = fmt(yBenefit) + '원';
+      document.getElementById('yrExtraCost').textContent = fmt(extraCost) + '원';
+      document.getElementById('yrExtraBenefit').textContent = fmt(extraBenefit) + '원';
       document.getElementById('yrActual').textContent = fmt(actual) + '원';
-      document.getElementById('yrPerMile').textContent = yMile > 0 && actual > 0
-        ? (actual / yMile).toFixed(1) + ' 원/마일'
-        : yMile > 0 && actual <= 0 ? '무료! 🎉' : '- 원/마일';
+      document.getElementById('yrTotalMile').textContent = fmt(totalMile) + ' 마일';
+      document.getElementById('yrPerMile').textContent = totalMile > 0 && actual > 0
+        ? (actual / totalMile).toFixed(1) + ' 원/마일'
+        : totalMile > 0 && actual <= 0 ? '무료! 🎉' : '- 원/마일';
     }
 
     // ===== 거래 수정/삭제 =====
