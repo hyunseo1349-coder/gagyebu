@@ -3815,10 +3815,7 @@
           state.customCards = importData.customCards || [];
           state.customCategories = importData.customCategories || [];
 
-          // 커스텀 카드/카테고리 복원
-          if (state.customCards) {
-            state.customCards.forEach(c => { CARDS[c.key] = c.name; });
-          }
+          // 커스텀 카테고리 복원 (커스텀 카드는 배열 형태라 별도 처리 불필요)
           if (state.customCategories) {
             state.customCategories.forEach(c => { CATEGORIES[c.key] = { name: c.name, color: c.color }; });
           }
