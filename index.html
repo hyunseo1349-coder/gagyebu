@@ -688,6 +688,39 @@
       border-radius: 12px;
     }
 
+    /* 선택 모드 토글 버튼 */
+    .tx-select-toggle {
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: white;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--text-secondary);
+    }
+    .tx-select-toggle:hover {
+      background: var(--bg);
+    }
+    .tx-select-toggle.active {
+      display: none;
+    }
+    .tx-select-mode-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      justify-content: space-between;
+    }
+    .tx-select-cancel {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 8px;
+      background: var(--text-muted);
+      color: white;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
     /* 거래 항목 체크박스 */
     .tx-checkbox {
       width: 20px;
@@ -695,10 +728,18 @@
       cursor: pointer;
       accent-color: var(--primary);
       flex-shrink: 0;
+      display: none;
+    }
+    .select-mode .tx-checkbox {
+      display: block;
     }
     .tx-item.selected {
       background: var(--primary-light);
       border-color: var(--primary);
+    }
+    .tx-item.drag-selecting {
+      background: #DBEAFE;
+      border-color: #3B82F6;
     }
 
     .tx-item {
@@ -1122,6 +1163,42 @@
     .yearly-view.active { display: block; }
     .monthly-view.hidden { display: none; }
     
+    /* 카드사별 사용금액 */
+    .card-usage-section { margin-top: 12px; }
+    .card-issuer-group { margin-bottom: 16px; }
+    .card-issuer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      background: var(--primary-light);
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .card-issuer-header:hover { background: #E0E7FF; }
+    .card-issuer-name { color: var(--primary); }
+    .card-issuer-amount { color: var(--primary); }
+    .card-detail-list {
+      display: none;
+      padding: 8px 12px;
+      margin-top: 4px;
+      background: var(--bg);
+      border-radius: 8px;
+    }
+    .card-detail-list.expanded { display: block; }
+    .card-detail-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border);
+    }
+    .card-detail-item:last-child { border-bottom: none; }
+    .card-detail-name { color: var(--text-secondary); }
+    .card-detail-amount { font-weight: 500; }
+
     .monthly-bars { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
     .month-bar-item {
       display: flex;
@@ -1346,14 +1423,18 @@
           <button class="search-clear" onclick="clearSearch()" id="searchClearBtn" style="display:none;">✕</button>
         </div>
         <div class="tx-select-bar" id="txSelectBar">
-          <label class="tx-select-all">
-            <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this.checked)">
-            <span>전체 선택</span>
-          </label>
-          <div class="tx-select-actions" id="txSelectActions" style="display:none;">
-            <span class="tx-select-count" id="selectCount">0개 선택</span>
-            <button class="tx-action-btn copy" id="copyBtn" onclick="copySelectedTx()" style="display:none;">📋 복사</button>
-            <button class="tx-action-btn delete" onclick="deleteSelectedTx()">🗑️ 선택 삭제</button>
+          <button class="tx-select-toggle" id="selectModeBtn" onclick="toggleSelectMode()">☑️ 선택</button>
+          <div class="tx-select-mode-controls" id="selectModeControls" style="display:none;">
+            <label class="tx-select-all">
+              <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this.checked)">
+              <span>전체</span>
+            </label>
+            <div class="tx-select-actions" id="txSelectActions" style="display:none;">
+              <span class="tx-select-count" id="selectCount">0개</span>
+              <button class="tx-action-btn copy" id="copyBtn" onclick="copySelectedTx()" style="display:none;">📋</button>
+              <button class="tx-action-btn delete" onclick="deleteSelectedTx()">🗑️</button>
+            </div>
+            <button class="tx-select-cancel" onclick="exitSelectMode()">취소</button>
           </div>
         </div>
         <div class="tx-list" id="txList"></div>
@@ -1395,6 +1476,11 @@
           <div class="chart-title">📈 월별 지출 추이</div>
           <div class="chart-wrapper"><canvas id="yearlyBarChart"></canvas></div>
         </div>
+      </div>
+
+      <div class="tx-section">
+        <div class="tx-title" style="margin-bottom:8px">💳 카드사별 연간 사용금액</div>
+        <div class="card-usage-section" id="cardUsageSection"></div>
       </div>
 
       <div class="tx-section">
@@ -1663,7 +1749,7 @@
             <div class="mile-input-group">
               <label>기타 마일리지</label>
               <div class="mile-input-wrapper">
-                <input type="number" class="mile-input" id="yExtraMile" oninput="calcYearlyMile()" placeholder="분모+">
+                <input type="number" class="mile-input" id="yExtraMile" oninput="calcYearlyMile()" placeholder="0">
                 <span class="mile-suffix">마일</span>
               </div>
             </div>
@@ -1672,14 +1758,16 @@
             <div class="mile-input-group">
               <label>기타 비용</label>
               <div class="mile-input-wrapper">
-                <input type="number" class="mile-input" id="yExtraCost" oninput="calcYearlyMile()" placeholder="분자+">
+                <input type="number" class="mile-input" id="yExtraCost" oninput="calcYearlyMile()" placeholder="0">
                 <span class="mile-suffix">원</span>
               </div>
             </div>
+          </div>
+          <div class="mile-input-row">
             <div class="mile-input-group">
               <label>기타 혜택</label>
               <div class="mile-input-wrapper">
-                <input type="number" class="mile-input" id="yExtraBenefit" oninput="calcYearlyMile()" placeholder="분자-">
+                <input type="number" class="mile-input" id="yExtraBenefit" oninput="calcYearlyMile()" placeholder="0">
                 <span class="mile-suffix">원</span>
               </div>
             </div>
@@ -1744,6 +1832,7 @@
       expandedId: null,
       selectedTxIds: [],  // 선택된 거래 ID들
       filteredTxIds: [],  // 현재 필터된 거래 ID들 (전체선택용)
+      selectMode: false,  // 선택 모드 활성화 여부
       data: {},           // 월별 거래
       mileData: {},       // 월별 마일 입력
       yearlyMileData: {}, // 연간 마일 입력
@@ -2147,7 +2236,7 @@
         return `
           <div class="tx-item ${expanded ? 'expanded' : ''} ${isSelected ? 'selected' : ''}" onclick="toggleExpand('${t.id}')">
             <div class="tx-main">
-              <input type="checkbox" class="tx-checkbox" ${isSelected ? 'checked' : ''}
+              <input type="checkbox" class="tx-checkbox" data-txid="${t.id}" ${isSelected ? 'checked' : ''}
                 onclick="event.stopPropagation(); toggleTxSelect('${t.id}', this.checked)">
               <div class="tx-date">${t.date}</div>
               <div class="tx-info">
@@ -2217,6 +2306,25 @@
     }
 
     // ===== 거래 선택 관련 =====
+    function toggleSelectMode() {
+      state.selectMode = true;
+      state.selectedTxIds = [];
+      document.getElementById('selectModeBtn').style.display = 'none';
+      document.getElementById('selectModeControls').style.display = 'flex';
+      document.getElementById('txList').classList.add('select-mode');
+      renderTxList(getTx());
+      initDragSelect();
+    }
+
+    function exitSelectMode() {
+      state.selectMode = false;
+      state.selectedTxIds = [];
+      document.getElementById('selectModeBtn').style.display = 'block';
+      document.getElementById('selectModeControls').style.display = 'none';
+      document.getElementById('txList').classList.remove('select-mode');
+      renderTxList(getTx());
+    }
+
     function toggleTxSelect(id, checked) {
       if (checked) {
         if (!state.selectedTxIds.includes(id)) {
@@ -2235,6 +2343,75 @@
       } else {
         state.selectedTxIds = [];
       }
+      renderTxList(getTx());
+    }
+
+    // 모바일 드래그 선택
+    let dragState = { active: false, startY: 0, lastY: 0, startIds: [] };
+
+    function initDragSelect() {
+      const txList = document.getElementById('txList');
+      if (!txList) return;
+
+      txList.addEventListener('touchstart', handleDragStart, { passive: false });
+      txList.addEventListener('touchmove', handleDragMove, { passive: false });
+      txList.addEventListener('touchend', handleDragEnd);
+    }
+
+    function handleDragStart(e) {
+      if (!state.selectMode) return;
+      if (e.target.classList.contains('tx-checkbox')) return;
+
+      const touch = e.touches[0];
+      dragState.active = true;
+      dragState.startY = touch.clientY;
+      dragState.lastY = touch.clientY;
+      dragState.startIds = [...state.selectedTxIds];
+    }
+
+    function handleDragMove(e) {
+      if (!dragState.active || !state.selectMode) return;
+      e.preventDefault();
+
+      const touch = e.touches[0];
+      const txList = document.getElementById('txList');
+      const items = txList.querySelectorAll('.tx-item');
+
+      const minY = Math.min(dragState.startY, touch.clientY);
+      const maxY = Math.max(dragState.startY, touch.clientY);
+
+      items.forEach(item => {
+        const rect = item.getBoundingClientRect();
+        const itemMidY = rect.top + rect.height / 2;
+        const txId = item.querySelector('.tx-checkbox')?.getAttribute('data-txid');
+
+        if (!txId) return;
+
+        if (itemMidY >= minY && itemMidY <= maxY) {
+          item.classList.add('drag-selecting');
+          if (!state.selectedTxIds.includes(txId)) {
+            state.selectedTxIds.push(txId);
+          }
+        } else {
+          item.classList.remove('drag-selecting');
+          if (!dragState.startIds.includes(txId)) {
+            state.selectedTxIds = state.selectedTxIds.filter(id => id !== txId);
+          }
+        }
+      });
+
+      updateSelectedUI(getTx());
+      dragState.lastY = touch.clientY;
+    }
+
+    function handleDragEnd() {
+      if (!dragState.active) return;
+      dragState.active = false;
+
+      document.querySelectorAll('.tx-item.drag-selecting').forEach(item => {
+        item.classList.remove('drag-selecting');
+      });
+
       renderTxList(getTx());
     }
 
@@ -2298,6 +2475,7 @@
       }
       state.selectedTxIds = [];
       save();
+      exitSelectMode();
       render();
     }
 
@@ -2323,7 +2501,7 @@
       const k = key(state.year, state.month);
       if (!state.data[k]) state.data[k] = [];
       state.data[k].push(newTx);
-      state.selectedTxIds = [newTx.id];
+      exitSelectMode();
       save();
       render();
       alert('거래가 복사되었습니다.');
@@ -3299,6 +3477,7 @@
       renderYearlyCatChart(yCatTotals);
       renderYearlyBarChart(monthlyStats);
       renderMonthlyBars(monthlyStats);
+      renderCardUsage();
     }
 
     function renderYearlyCatChart(data) {
@@ -3403,20 +3582,102 @@
     }
 
     function renderMonthlyBars(stats) {
-      const max = Math.max(...stats.map(s => s.total), 1);
+      const max = Math.max(...stats.map(s => s.my), 1);
       document.getElementById('monthlyBars').innerHTML = stats.map(s => `
         <div class="month-bar-item" onclick="goMonth(${s.m})">
           <span class="month-bar-label">${s.m}월</span>
           <div class="month-bar-track">
-            <div class="month-bar-fill living" style="width:${(s.total/max)*100}%"></div>
+            <div class="month-bar-fill living" style="width:${(s.my/max)*100}%"></div>
           </div>
-          <span class="month-bar-value">${s.total ? fmtShort(s.total) + '원' : '-'}</span>
+          <span class="month-bar-value">${s.my ? fmtShort(s.my) + '원' : '-'}</span>
         </div>`).join('');
     }
 
     function goMonth(m) {
       state.month = m;
       switchView('monthly');
+    }
+
+    // ===== 카드사별 사용금액 =====
+    function getCardIssuer(cardName) {
+      // 카드사 그룹화 (현대로 시작하면 현대카드)
+      const name = cardName || '';
+      if (name.startsWith('현대') || name.includes('현대카드')) return '현대카드';
+      if (name.startsWith('신한') || name.includes('신한카드')) return '신한카드';
+      if (name.startsWith('삼성') || name.includes('삼성카드')) return '삼성카드';
+      if (name.startsWith('KB') || name.includes('국민카드') || name.includes('KB국민')) return 'KB국민카드';
+      if (name.startsWith('롯데') || name.includes('롯데카드')) return '롯데카드';
+      if (name.startsWith('우리') || name.includes('우리카드')) return '우리카드';
+      if (name.startsWith('하나') || name.includes('하나카드')) return '하나카드';
+      if (name.startsWith('NH') || name.includes('농협') || name.includes('NH농협')) return 'NH농협카드';
+      if (name.startsWith('BC') || name.includes('BC카드')) return 'BC카드';
+      if (name.includes('네이버페이') || name === '네이버페이') return '네이버페이';
+      if (name.includes('카카오페이') || name === '카카오페이') return '카카오페이';
+      if (name.includes('토스') || name === '토스') return '토스';
+      if (name === '현금' || name === '계좌이체') return '현금/계좌이체';
+      return '기타';
+    }
+
+    function renderCardUsage() {
+      const cardData = {}; // { 카드사: { total: 금액, cards: { 카드명: 금액 } } }
+
+      // 연간 전체 거래 집계
+      for (let m = 1; m <= 12; m++) {
+        const tx = state.data[key(state.year, m)] || [];
+        tx.forEach(t => {
+          if (t.cat === 'giftcard') return; // 상품권 제외
+          const issuer = getCardIssuer(t.card);
+          const cardName = t.card || '미지정';
+
+          if (!cardData[issuer]) {
+            cardData[issuer] = { total: 0, cards: {} };
+          }
+          cardData[issuer].total += t.amt;
+          cardData[issuer].cards[cardName] = (cardData[issuer].cards[cardName] || 0) + t.amt;
+        });
+      }
+
+      // 금액순 정렬
+      const sorted = Object.entries(cardData)
+        .sort((a, b) => b[1].total - a[1].total);
+
+      const section = document.getElementById('cardUsageSection');
+      if (!section) return;
+
+      if (sorted.length === 0) {
+        section.innerHTML = '<div style="padding:12px; color:var(--text-muted); font-size:13px;">거래 내역이 없습니다.</div>';
+        return;
+      }
+
+      section.innerHTML = sorted.map(([issuer, data], idx) => {
+        const cardList = Object.entries(data.cards)
+          .sort((a, b) => b[1] - a[1])
+          .map(([card, amt]) => `
+            <div class="card-detail-item">
+              <span class="card-detail-name">${card}</span>
+              <span class="card-detail-amount">${fmt(amt)}원</span>
+            </div>
+          `).join('');
+
+        const hasMultipleCards = Object.keys(data.cards).length > 1;
+
+        return `
+          <div class="card-issuer-group">
+            <div class="card-issuer-header" onclick="toggleCardDetail(${idx})">
+              <span class="card-issuer-name">💳 ${issuer}${hasMultipleCards ? ' ▼' : ''}</span>
+              <span class="card-issuer-amount">${fmt(data.total)}원</span>
+            </div>
+            ${hasMultipleCards ? `<div class="card-detail-list" id="cardDetail_${idx}">${cardList}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleCardDetail(idx) {
+      const detail = document.getElementById(`cardDetail_${idx}`);
+      if (detail) {
+        detail.classList.toggle('expanded');
+      }
     }
 
     // ===== 마일 계산기 =====
