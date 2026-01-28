@@ -644,8 +644,63 @@
       font-size: 14px;
     }
     .tx-total-bar.active { display: flex; }
+    .tx-total-bar.selected { background: #DCFCE7; display: flex; }
+    .tx-total-bar.selected .tx-total-label { color: #16A34A; }
+    .tx-total-bar.selected .tx-total-amount { color: #16A34A; }
     .tx-total-label { color: var(--primary); font-weight: 600; }
     .tx-total-amount { font-weight: 700; color: var(--primary); font-size: 16px; }
+
+    /* 선택 바 스타일 */
+    .tx-select-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      background: var(--bg);
+      border-radius: 10px;
+      font-size: 13px;
+    }
+    .tx-select-all {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      color: var(--text-secondary);
+    }
+    .tx-select-all input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: var(--primary);
+    }
+    .tx-select-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .tx-select-count {
+      font-size: 12px;
+      color: var(--primary);
+      font-weight: 600;
+      padding: 4px 10px;
+      background: var(--primary-light);
+      border-radius: 12px;
+    }
+
+    /* 거래 항목 체크박스 */
+    .tx-checkbox {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      accent-color: var(--primary);
+      flex-shrink: 0;
+    }
+    .tx-item.selected {
+      background: var(--primary-light);
+      border-color: var(--primary);
+    }
+
     .tx-item {
       padding: 16px;
       border-radius: 14px;
@@ -1258,16 +1313,7 @@
             </div>
             <div class="form-group">
               <label class="form-label">결제수단</label>
-              <select class="form-select" id="mCard">
-                <option>신한카드</option>
-                <option>삼성카드</option>
-                <option>현대카드</option>
-                <option>KB국민카드</option>
-                <option>롯데카드</option>
-                <option>네이버페이</option>
-                <option>카카오페이</option>
-                <option>현금</option>
-              </select>
+              <select class="form-select" id="mCard"></select>
             </div>
             <div class="form-group">
               <label class="form-label">카테고리</label>
@@ -1299,10 +1345,25 @@
           <input type="text" id="txSearchInput" placeholder="🔍 금액 또는 사용처 검색" oninput="handleSearch()">
           <button class="search-clear" onclick="clearSearch()" id="searchClearBtn" style="display:none;">✕</button>
         </div>
+        <div class="tx-select-bar" id="txSelectBar">
+          <label class="tx-select-all">
+            <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this.checked)">
+            <span>전체 선택</span>
+          </label>
+          <div class="tx-select-actions" id="txSelectActions" style="display:none;">
+            <span class="tx-select-count" id="selectCount">0개 선택</span>
+            <button class="tx-action-btn copy" id="copyBtn" onclick="copySelectedTx()" style="display:none;">📋 복사</button>
+            <button class="tx-action-btn delete" onclick="deleteSelectedTx()">🗑️ 선택 삭제</button>
+          </div>
+        </div>
         <div class="tx-list" id="txList"></div>
         <div class="tx-total-bar" id="txTotalBar">
           <span class="tx-total-label">필터 결과 합계</span>
           <span class="tx-total-amount" id="txTotalAmount">0원</span>
+        </div>
+        <div class="tx-total-bar selected" id="txSelectedBar" style="display:none;">
+          <span class="tx-total-label">✅ 선택 소계</span>
+          <span class="tx-total-amount" id="txSelectedAmount">0원</span>
         </div>
       </div>
     </div>
@@ -1484,7 +1545,7 @@
             <button class="btn btn-primary btn-sm" onclick="addCustomCategory()">추가</button>
           </div>
           <div style="font-size:11px; color:var(--text-muted); margin-top:8px;">
-            기본 카테고리: 식비, 쇼핑, 교통, 여가, 여행, 의료, 공과금, 교육, 상품권, 기타
+            기본 카테고리: 식비, 쇼핑, 교통, 여가, 여행, 의료, 정기결제, 교육, 상품권, 기타
           </div>
         </div>
 
@@ -1557,28 +1618,14 @@
             <input type="number" id="editAmount" placeholder="0">
           </div>
           <div class="edit-form-group">
-            <label>날짜 (MM/DD)</label>
-            <input type="text" id="editDate" placeholder="01/23">
+            <label>날짜</label>
+            <input type="date" id="editDate" class="form-input">
           </div>
         </div>
         <div class="edit-form-row">
           <div class="edit-form-group">
             <label>결제수단</label>
-            <select id="editCard">
-              <option>신한카드</option>
-              <option>삼성카드</option>
-              <option>현대카드</option>
-              <option>KB국민카드</option>
-              <option>롯데카드</option>
-              <option>우리카드</option>
-              <option>하나카드</option>
-              <option>NH농협카드</option>
-              <option>BC카드</option>
-              <option>네이버페이</option>
-              <option>카카오페이</option>
-              <option>토스</option>
-              <option>현금</option>
-            </select>
+            <select id="editCard"></select>
           </div>
           <div class="edit-form-group">
             <label>카테고리</label>
@@ -1680,7 +1727,7 @@
       leisure: { name: '여가', color: '#EC4899' },
       travel: { name: '여행', color: '#0EA5E9' },
       medical: { name: '의료', color: '#EF4444' },
-      utility: { name: '공과금', color: '#3B82F6' },
+      utility: { name: '정기결제', color: '#3B82F6' },
       education: { name: '교육', color: '#8B5CF6' },
       giftcard: { name: '상품권', color: '#F59E0B' },
       etc: { name: '기타', color: '#6B7280' }
@@ -1695,6 +1742,8 @@
       cardFilter: null,   // 카드별 필터
       searchQuery: '',    // 검색어
       expandedId: null,
+      selectedTxIds: [],  // 선택된 거래 ID들
+      filteredTxIds: [],  // 현재 필터된 거래 ID들 (전체선택용)
       data: {},           // 월별 거래
       mileData: {},       // 월별 마일 입력
       yearlyMileData: {}, // 연간 마일 입력
@@ -2080,10 +2129,14 @@
         totalBar.classList.remove('active');
       }
 
+      // 현재 필터된 거래 ID 목록 저장 (전체선택용)
+      state.filteredTxIds = filtered.map(t => t.id);
+
       list.innerHTML = filtered.map(t => {
         const cat = CATEGORIES[t.cat] || CATEGORIES.etc;
         const isGift = t.cat === 'giftcard';
         const expanded = state.expandedId === t.id;
+        const isSelected = state.selectedTxIds.includes(t.id);
         // 나 체크 해제시 0원 표시 (split.members 존재하면 me 키 확인)
         const myShare = t.split?.members
           ? (t.split.members.hasOwnProperty('me') ? (t.split.members.me || 0) : 0)
@@ -2092,8 +2145,10 @@
         const hasSplit = memberCount > 1 || (t.split?.members && !t.split.members.hasOwnProperty('me'));
 
         return `
-          <div class="tx-item ${expanded ? 'expanded' : ''}" onclick="toggleExpand('${t.id}')">
+          <div class="tx-item ${expanded ? 'expanded' : ''} ${isSelected ? 'selected' : ''}" onclick="toggleExpand('${t.id}')">
             <div class="tx-main">
+              <input type="checkbox" class="tx-checkbox" ${isSelected ? 'checked' : ''}
+                onclick="event.stopPropagation(); toggleTxSelect('${t.id}', this.checked)">
               <div class="tx-date">${t.date}</div>
               <div class="tx-info">
                 <div class="tx-store">
@@ -2139,6 +2194,9 @@
             </div>
           </div>`;
       }).join('');
+
+      // 선택 UI 업데이트
+      updateSelectedUI(filtered);
     }
 
     function renderSplitMembers(t) {
@@ -2156,6 +2214,119 @@
             <span class="split-suffix">원</span>
           </div>`;
       }).join('');
+    }
+
+    // ===== 거래 선택 관련 =====
+    function toggleTxSelect(id, checked) {
+      if (checked) {
+        if (!state.selectedTxIds.includes(id)) {
+          state.selectedTxIds.push(id);
+        }
+      } else {
+        state.selectedTxIds = state.selectedTxIds.filter(tid => tid !== id);
+      }
+      renderTxList(getTx());
+    }
+
+    function toggleSelectAll(checked) {
+      if (checked) {
+        // 현재 필터된 거래 전체 선택
+        state.selectedTxIds = [...(state.filteredTxIds || [])];
+      } else {
+        state.selectedTxIds = [];
+      }
+      renderTxList(getTx());
+    }
+
+    function updateSelectedUI(filtered) {
+      const selectedCount = state.selectedTxIds.length;
+      const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+      const selectActions = document.getElementById('txSelectActions');
+      const selectCountEl = document.getElementById('selectCount');
+      const copyBtn = document.getElementById('copyBtn');
+      const selectedBar = document.getElementById('txSelectedBar');
+      const selectedAmount = document.getElementById('txSelectedAmount');
+
+      // 전체선택 체크박스 상태
+      if (selectAllCheckbox && filtered.length > 0) {
+        const filteredIds = filtered.map(t => t.id);
+        const allSelected = filteredIds.every(id => state.selectedTxIds.includes(id));
+        const someSelected = filteredIds.some(id => state.selectedTxIds.includes(id));
+        selectAllCheckbox.checked = allSelected;
+        selectAllCheckbox.indeterminate = someSelected && !allSelected;
+      }
+
+      // 선택 액션 표시/숨김
+      if (selectActions) {
+        selectActions.style.display = selectedCount > 0 ? 'flex' : 'none';
+      }
+
+      // 선택 개수 표시
+      if (selectCountEl) {
+        selectCountEl.textContent = `${selectedCount}개 선택`;
+      }
+
+      // 복사 버튼 (1개 선택 시만 표시)
+      if (copyBtn) {
+        copyBtn.style.display = selectedCount === 1 ? 'inline-block' : 'none';
+      }
+
+      // 선택 소계 계산 및 표시
+      if (selectedBar && selectedAmount) {
+        if (selectedCount > 0) {
+          const txList = getTx();
+          const sum = state.selectedTxIds.reduce((acc, id) => {
+            const tx = txList.find(t => t.id === id);
+            return acc + (tx ? tx.amt : 0);
+          }, 0);
+          selectedAmount.textContent = fmt(sum) + '원';
+          selectedBar.style.display = 'flex';
+        } else {
+          selectedBar.style.display = 'none';
+        }
+      }
+    }
+
+    function deleteSelectedTx() {
+      const count = state.selectedTxIds.length;
+      if (count === 0) return;
+      if (!confirm(`선택한 ${count}개 거래를 삭제하시겠습니까?`)) return;
+
+      const k = key(state.year, state.month);
+      if (state.data[k]) {
+        state.data[k] = state.data[k].filter(t => !state.selectedTxIds.includes(t.id));
+      }
+      state.selectedTxIds = [];
+      save();
+      render();
+    }
+
+    function copySelectedTx() {
+      if (state.selectedTxIds.length !== 1) return;
+      const txId = state.selectedTxIds[0];
+      const txList = getTx();
+      const tx = txList.find(t => t.id === txId);
+      if (!tx) return;
+
+      // 거래 복사 (새 ID, 오늘 날짜)
+      const today = new Date();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+
+      const newTx = {
+        ...tx,
+        id: uid(),
+        date: `${mm}/${dd}`,
+        split: tx.split ? JSON.parse(JSON.stringify(tx.split)) : { members: { me: tx.amt } }
+      };
+
+      const k = key(state.year, state.month);
+      if (!state.data[k]) state.data[k] = [];
+      state.data[k].push(newTx);
+      state.selectedTxIds = [newTx.id];
+      save();
+      render();
+      alert('거래가 복사되었습니다.');
     }
 
     function toggleExpand(id) {
@@ -2470,7 +2641,7 @@
         [/병원|약국|의료|치과|안과|한의원|클리닉/i, 'medical'],
         // 교육
         [/학원|교육|강의|도서|교보문고|알라딘|yes24/i, 'education'],
-        // 공과금
+        // 정기결제
         [/전기|가스|수도|통신|인터넷|skt|kt|lg유플러스/i, 'utility'],
         // 쇼핑
         [/쿠팡|네이버|쇼핑|백화점|아울렛|무신사|다이소|올리브영/i, 'shopping']
@@ -2774,9 +2945,9 @@
         [/학원|교육|강의|도서|교보문고|yes24|알라딘|영풍문고|반디앤루니스/i, 'education'],
         [/학교|대학|등록금|수강료|인강|온라인강의/i, 'education'],
 
-        // 공과금
+        // 정기결제
         [/skt|kt|lg유플러스|통신|전기|가스|수도|관리비|인터넷|이동통신/i, 'utility'],
-        [/보험|건강보험|국민연금|세금|공과금/i, 'utility'],
+        [/보험|건강보험|국민연금|세금|공과금|정기결제|구독|넷플릭스|유튜브프리미엄|스포티파이/i, 'utility'],
 
         // 상품권 (띵샵, 교환권 등 포함)
         [/상품권|기프트카드|기프트|교환권|띵샵|문화상품권|도서상품권|백화점상품권|신세계상품권|롯데상품권/i, 'giftcard'],
@@ -3011,7 +3182,7 @@
         [/클래스101|탈잉|숨고|크몽|인프런|패스트캠퍼스|코드잇/i, 'education'],
         [/교보문고|영풍문고|YES24|알라딘|반디앤루니스|서점|도서/i, 'education'],
 
-        // 공과금 - 통신, 전기, 가스
+        // 정기결제 - 통신, 전기, 가스
         [/SKT|KT|LG유플러스|알뜰폰|통신요금|핸드폰|휴대폰/i, 'utility'],
         [/한국전력|전기요금|전기세|KEPCO/i, 'utility'],
         [/도시가스|가스요금|가스비/i, 'utility'],
@@ -3378,7 +3549,11 @@
       document.getElementById('editTxId').value = tid;
       document.getElementById('editStore').value = tx.store;
       document.getElementById('editAmount').value = tx.amt;
-      document.getElementById('editDate').value = tx.date;
+
+      // MM/DD 형식을 YYYY-MM-DD 형식으로 변환
+      const [mm, dd] = tx.date.split('/');
+      const dateValue = `${state.year}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+      document.getElementById('editDate').value = dateValue;
 
       // 카드/카테고리 옵션 업데이트 후 값 설정
       const editCard = document.getElementById('editCard');
@@ -3397,13 +3572,17 @@
       const tid = document.getElementById('editTxId').value;
       const store = document.getElementById('editStore').value.trim();
       const amt = parseInt(document.getElementById('editAmount').value);
-      const date = document.getElementById('editDate').value.trim();
+      const dateInput = document.getElementById('editDate').value.trim();
       const card = document.getElementById('editCard').value;
       const cat = document.getElementById('editCategory').value;
 
       if (!store) { alert('가맹점명을 입력하세요'); return; }
       if (!amt || amt <= 0) { alert('올바른 금액을 입력하세요'); return; }
-      if (!/^\d{2}\/\d{2}$/.test(date)) { alert('날짜 형식은 MM/DD 입니다'); return; }
+      if (!dateInput) { alert('날짜를 선택하세요'); return; }
+
+      // YYYY-MM-DD 형식을 MM/DD 형식으로 변환
+      const [y, m, d] = dateInput.split('-');
+      const date = `${m}/${d}`;
 
       const k = key(state.year, state.month);
       const txList = state.data[k] || [];
