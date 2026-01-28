@@ -1163,29 +1163,62 @@
     .yearly-view.active { display: block; }
     .monthly-view.hidden { display: none; }
     
-    /* 카드사별 사용금액 */
-    .card-usage-section { margin-top: 12px; }
-    .card-issuer-group { margin-bottom: 16px; }
-    .card-issuer-header {
+    /* 카드사별 사용금액 차트 */
+    .card-usage-chart-container {
       display: flex;
-      justify-content: space-between;
+      flex-direction: column;
+      gap: 16px;
+      padding: 12px;
+    }
+    .card-usage-legend {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .card-legend-item {
+      display: flex;
       align-items: center;
+      justify-content: space-between;
       padding: 10px 12px;
-      background: var(--primary-light);
+      background: var(--bg);
       border-radius: 10px;
       cursor: pointer;
-      font-weight: 600;
-      font-size: 14px;
+      transition: all 0.2s;
     }
-    .card-issuer-header:hover { background: #E0E7FF; }
-    .card-issuer-name { color: var(--primary); }
-    .card-issuer-amount { color: var(--primary); }
+    .card-legend-item:hover {
+      background: var(--primary-light);
+    }
+    .card-legend-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card-legend-color {
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+    }
+    .card-legend-name {
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .card-legend-amount {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--primary);
+    }
+    .card-legend-percent {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-left: 4px;
+    }
     .card-detail-list {
       display: none;
       padding: 8px 12px;
       margin-top: 4px;
-      background: var(--bg);
+      background: white;
       border-radius: 8px;
+      border: 1px solid var(--border);
     }
     .card-detail-list.expanded { display: block; }
     .card-detail-item {
@@ -1480,7 +1513,12 @@
 
       <div class="tx-section">
         <div class="tx-title" style="margin-bottom:8px">💳 카드사별 연간 사용금액</div>
-        <div class="card-usage-section" id="cardUsageSection"></div>
+        <div class="card-usage-chart-container">
+          <div class="chart-wrapper" style="max-width:280px; margin:0 auto;">
+            <canvas id="cardUsageChart"></canvas>
+          </div>
+          <div class="card-usage-legend" id="cardUsageLegend"></div>
+        </div>
       </div>
 
       <div class="tx-section">
@@ -3641,15 +3679,61 @@
       const sorted = Object.entries(cardData)
         .sort((a, b) => b[1].total - a[1].total);
 
-      const section = document.getElementById('cardUsageSection');
-      if (!section) return;
+      const legend = document.getElementById('cardUsageLegend');
+      const ctx = document.getElementById('cardUsageChart');
+
+      if (!legend || !ctx) return;
 
       if (sorted.length === 0) {
-        section.innerHTML = '<div style="padding:12px; color:var(--text-muted); font-size:13px;">거래 내역이 없습니다.</div>';
+        legend.innerHTML = '<div style="padding:12px; color:var(--text-muted); font-size:13px; text-align:center;">거래 내역이 없습니다.</div>';
+        if (state.charts.cardUsage) state.charts.cardUsage.destroy();
         return;
       }
 
-      section.innerHTML = sorted.map(([issuer, data], idx) => {
+      // 차트 색상
+      const colors = [
+        '#6366F1', '#EC4899', '#F97316', '#10B981', '#0EA5E9',
+        '#8B5CF6', '#EF4444', '#F59E0B', '#14B8A6', '#64748B'
+      ];
+
+      const total = sorted.reduce((acc, [, d]) => acc + d.total, 0);
+
+      // 도넛 차트 생성
+      if (state.charts.cardUsage) state.charts.cardUsage.destroy();
+      state.charts.cardUsage = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: sorted.map(([issuer]) => issuer),
+          datasets: [{
+            data: sorted.map(([, d]) => d.total),
+            backgroundColor: colors.slice(0, sorted.length),
+            borderWidth: 2,
+            borderColor: '#fff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          cutout: '65%',
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const pct = ((ctx.raw / total) * 100).toFixed(1);
+                  return ` ${fmt(ctx.raw)}원 (${pct}%)`;
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // 범례 (클릭 시 상세 펼침)
+      legend.innerHTML = sorted.map(([issuer, data], idx) => {
+        const pct = ((data.total / total) * 100).toFixed(1);
+        const hasMultipleCards = Object.keys(data.cards).length > 1;
+
         const cardList = Object.entries(data.cards)
           .sort((a, b) => b[1] - a[1])
           .map(([card, amt]) => `
@@ -3659,13 +3743,17 @@
             </div>
           `).join('');
 
-        const hasMultipleCards = Object.keys(data.cards).length > 1;
-
         return `
-          <div class="card-issuer-group">
-            <div class="card-issuer-header" onclick="toggleCardDetail(${idx})">
-              <span class="card-issuer-name">💳 ${issuer}${hasMultipleCards ? ' ▼' : ''}</span>
-              <span class="card-issuer-amount">${fmt(data.total)}원</span>
+          <div>
+            <div class="card-legend-item" onclick="toggleCardDetail(${idx})">
+              <div class="card-legend-left">
+                <div class="card-legend-color" style="background:${colors[idx]}"></div>
+                <span class="card-legend-name">${issuer}${hasMultipleCards ? ' ▼' : ''}</span>
+              </div>
+              <div>
+                <span class="card-legend-amount">${fmt(data.total)}원</span>
+                <span class="card-legend-percent">${pct}%</span>
+              </div>
             </div>
             ${hasMultipleCards ? `<div class="card-detail-list" id="cardDetail_${idx}">${cardList}</div>` : ''}
           </div>
