@@ -3670,21 +3670,21 @@
 
     // ===== 카드사별 사용금액 =====
     function getCardIssuer(cardName) {
-      // 카드사 그룹화 (현대로 시작하면 현대카드)
+      // 카드사 그룹화
       const name = cardName || '';
-      if (name.startsWith('현대') || name.includes('현대카드')) return '현대카드';
-      if (name.startsWith('신한') || name.includes('신한카드')) return '신한카드';
-      if (name.startsWith('삼성') || name.includes('삼성카드')) return '삼성카드';
-      if (name.startsWith('KB') || name.includes('국민카드') || name.includes('KB국민')) return 'KB국민카드';
-      if (name.startsWith('롯데') || name.includes('롯데카드')) return '롯데카드';
-      if (name.startsWith('우리') || name.includes('우리카드')) return '우리카드';
-      if (name.startsWith('하나') || name.includes('하나카드')) return '하나카드';
-      if (name.startsWith('NH') || name.includes('농협') || name.includes('NH농협')) return 'NH농협카드';
-      if (name.startsWith('BC') || name.includes('BC카드')) return 'BC카드';
-      if (name.includes('네이버페이') || name === '네이버페이') return '네이버페이';
-      if (name.includes('카카오페이') || name === '카카오페이') return '카카오페이';
-      if (name.includes('토스') || name === '토스') return '토스';
-      if (name === '현금' || name === '계좌이체') return '현금/계좌이체';
+      if (name.includes('현대') || name.startsWith('현대')) return '현대카드';
+      if (name.includes('신한') || name.startsWith('신한')) return '신한카드';
+      if (name.includes('삼성') || name.startsWith('삼성')) return '삼성카드';
+      if (name.includes('KB') || name.includes('국민') || name.startsWith('KB')) return 'KB국민카드';
+      if (name.includes('롯데') || name.startsWith('롯데')) return '롯데카드';
+      if (name.includes('우리') || name.startsWith('우리')) return '우리카드';
+      if (name.includes('하나') || name.startsWith('하나')) return '하나카드';
+      if (name.includes('NH') || name.includes('농협')) return 'NH농협카드';
+      if (name.includes('BC') || name.startsWith('BC')) return 'BC카드';
+      if (name.includes('네이버페이') || name.includes('네이버')) return '네이버페이';
+      if (name.includes('카카오페이') || name.includes('카카오')) return '카카오페이';
+      if (name.includes('토스')) return '토스';
+      if (name === '현금' || name.includes('계좌이체')) return '현금/계좌이체';
       return '기타';
     }
 
@@ -3753,6 +3753,23 @@
 
       const total = sorted.reduce((acc, [, d]) => acc + d.total, 0);
 
+      // 도넛 차트 가운데 텍스트 플러그인
+      const centerTextPlugin = {
+        id: 'centerText',
+        beforeDraw: function(chart) {
+          const { width, height, ctx } = chart;
+          ctx.restore();
+          const fontSize = (height / 114).toFixed(2);
+          ctx.font = `bold ${fontSize}em Pretendard`;
+          ctx.textBaseline = 'middle';
+          ctx.textAlign = 'center';
+          ctx.fillStyle = '#374151';
+          const text = fmtShort(total);
+          ctx.fillText(text, width / 2, height / 2);
+          ctx.save();
+        }
+      };
+
       // 도넛 차트 생성
       if (state.charts[`cardUsage${suffix}`]) state.charts[`cardUsage${suffix}`].destroy();
       state.charts[`cardUsage${suffix}`] = new Chart(ctx, {
@@ -3781,7 +3798,8 @@
               }
             }
           }
-        }
+        },
+        plugins: [centerTextPlugin]
       });
 
       // 범례
