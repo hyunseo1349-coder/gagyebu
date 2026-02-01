@@ -2950,6 +2950,8 @@
 
       // 금액 패턴
       const amtPattern = /^([0-9,]+)\s*원\s*$/;
+      // 날짜+시간 패턴 (일시불, 26.2.1 14:07)
+      const dateTimePattern = /일시불.*?(\d{2})\.(\d{1,2})\.(\d{1,2})/;
 
       let i = 0;
       while (i < lines.length) {
@@ -2963,7 +2965,38 @@
           continue;
         }
 
-        // 방법 2: 멀티라인 형식 (현대카드 명세서 등)
+        // 방법 2: 4줄 형식 (사용처 / 금액원 / 카드종류 / 일시불,날짜)
+        if (amtPattern.test(line) && i >= 1 && i + 2 < lines.length) {
+          const nextLine = lines[i + 1];  // 카드종류
+          const nextNextLine = lines[i + 2];  // 일시불, 날짜
+
+          if (dateTimePattern.test(nextNextLine)) {
+            const amtMatch = line.match(amtPattern);
+            const amt = parseInt(amtMatch[1].replace(/,/g, ''));
+            const storeLine = lines[i - 1];  // 사용처
+            const cardLine = nextLine;
+            const dateLine = nextNextLine;
+
+            const dateMatch = dateLine.match(dateTimePattern);
+            let date = '';
+            if (dateMatch) {
+              const mm = dateMatch[2].padStart(2, '0');
+              const dd = dateMatch[3].padStart(2, '0');
+              date = `${mm}/${dd}`;
+            }
+
+            const card = normalizeCardName(cardLine);
+            const cat = detectCategoryFromStore(storeLine);
+
+            if (amt >= 100 && storeLine) {
+              parsedTx.push({ store: storeLine, amt, card, date, cat });
+              i += 3;  // 카드줄, 날짜줄 스킵
+              continue;
+            }
+          }
+        }
+
+        // 방법 3: 멀티라인 형식 (현대카드 명세서 등)
         // 금액만 있는 줄을 찾아서 위로 탐색
         if (amtPattern.test(line)) {
           const amtMatch = line.match(amtPattern);
@@ -2984,7 +3017,7 @@
           }
         }
 
-        // 방법 3: 단일 줄 시도
+        // 방법 4: 단일 줄 시도
         const p = parseLine(line);
         if (p) parsedTx.push(p);
 
@@ -3024,14 +3057,17 @@
     function normalizeCardName(rawCard) {
       const text = rawCard.trim();
 
-      // 현대카드 상품명 정규화
+      // 현대카드 상품명 정규화 (Amex 포함)
       const hyundaiProducts = [
-        [/대한항공카드/i, '현대 대한항공카드'],
+        [/대한항공카드|대한항공\s*카드/i, '현대 대한항공카드'],
         [/아시아나카드/i, '현대 아시아나카드'],
         [/M\s*카드|엠카드/i, '현대 M카드'],
         [/X\s*카드|엑스카드/i, '현대 X카드'],
         [/제로카드|ZERO/i, '현대 제로카드'],
-        [/그린카드/i, '현대 그린카드'],
+        [/Amex\s*Green|그린카드|Green\s*카드/i, '현대 Green카드'],
+        [/Amex\s*Gold|골드카드|Gold\s*카드/i, '현대 Gold카드'],
+        [/Amex\s*Platinum|플래티넘/i, '현대 Platinum카드'],
+        [/Amex/i, '현대카드'],
         [/네이버\s*현대카드/i, '네이버 현대카드'],
         [/카카오\s*현대카드/i, '카카오 현대카드'],
         [/코스트코\s*카드/i, '현대 코스트코카드'],
