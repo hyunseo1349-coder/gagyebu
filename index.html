@@ -1572,9 +1572,8 @@
         </div>
         <div class="monthly-bars" id="monthlyBars"></div>
         <div class="avg-card">
-          <div class="avg-row"><span class="avg-label">월평균 총 지출</span><span class="avg-value" id="avgTotal">0원</span></div>
-          <div class="avg-row"><span class="avg-label">월평균 생활비</span><span class="avg-value" id="avgLiving">0원</span></div>
           <div class="avg-row"><span class="avg-label">월평균 내 지출</span><span class="avg-value highlight" id="avgMy">0원</span></div>
+          <div class="avg-row"><span class="avg-label">월평균 카드사용액</span><span class="avg-value" id="avgCard">0원</span></div>
         </div>
       </div>
     </div>
@@ -3564,7 +3563,7 @@
     }
 
     function renderYearly() {
-      let yTotal = 0, yMy = 0, yGift = 0;
+      let yTotal = 0, yMy = 0, yGift = 0, yCardOnly = 0;
       const monthlyStats = [];
       const yCatTotals = {};  // 카테고리별 내 실제 지출
 
@@ -3573,6 +3572,12 @@
         let total = 0, my = 0, gift = 0, cardOnly = 0;
         tx.forEach(t => {
           total += t.amt;
+
+          // 총 카드 사용 금액 (현금/계좌이체/체크카드 제외, 상품권 포함)
+          if (!isDebitOrCash(t.card)) {
+            cardOnly += t.amt;
+          }
+
           if (t.cat === 'giftcard') {
             gift += t.amt;
           } else {
@@ -3586,14 +3591,10 @@
             my += myShare;
             // 카테고리별 내 실제 지출
             yCatTotals[t.cat] = (yCatTotals[t.cat] || 0) + myShare;
-            // 총 카드 사용 금액 (현금/계좌이체/체크카드 제외)
-            if (!isDebitOrCash(t.card)) {
-              cardOnly += t.amt;
-            }
           }
         });
         monthlyStats.push({ m, total, my, gift, cardOnly });
-        yTotal += total; yMy += my; yGift += gift;
+        yTotal += total; yMy += my; yGift += gift; yCardOnly += cardOnly;
       }
 
       document.getElementById('yTotalAmt').textContent = fmtShort(yTotal) + '원';
@@ -3601,10 +3602,8 @@
       document.getElementById('yGiftAmt').textContent = fmtShort(yGift) + '원';
 
       const withData = monthlyStats.filter(s => s.total > 0).length || 1;
-      const living = yTotal - yGift;
-      document.getElementById('avgTotal').textContent = fmtShort(Math.round(yTotal / withData)) + '원';
-      document.getElementById('avgLiving').textContent = fmtShort(Math.round(living / withData)) + '원';
       document.getElementById('avgMy').textContent = fmtShort(Math.round(yMy / withData)) + '원';
+      document.getElementById('avgCard').textContent = fmtShort(Math.round(yCardOnly / withData)) + '원';
 
       renderYearlyCatChart(yCatTotals);
       renderYearlyBarChart(monthlyStats);
