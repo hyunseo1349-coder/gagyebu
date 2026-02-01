@@ -1280,7 +1280,18 @@
       transition: width 0.5s;
     }
     .month-bar-fill.living { background: linear-gradient(90deg, var(--primary) 0%, #8B5CF6 100%); }
-    .month-bar-value { min-width: 70px; text-align: right; font-size: 14px; font-weight: 700; }
+    .month-bar-fill.my-expense { background: linear-gradient(90deg, #10B981 0%, #059669 100%); }
+    .month-bar-fill.card-expense { background: linear-gradient(90deg, var(--primary) 0%, #8B5CF6 100%); }
+    .month-bar-value { min-width: 55px; text-align: right; font-size: 13px; font-weight: 600; color: #10B981; }
+    .month-bar-value.card { color: var(--primary); }
+    .month-bar-dual { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    .month-bar-row { display: flex; align-items: center; gap: 8px; }
+    .month-bar-row .month-bar-track { height: 14px; }
+    .month-bar-legend { display: flex; gap: 16px; margin-bottom: 12px; font-size: 12px; color: var(--text-secondary); }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-color { width: 12px; height: 12px; border-radius: 3px; }
+    .legend-color.my { background: linear-gradient(90deg, #10B981 0%, #059669 100%); }
+    .legend-color.card { background: linear-gradient(90deg, var(--primary) 0%, #8B5CF6 100%); }
     
     .avg-card {
       background: linear-gradient(135deg, #EDE9FE 0%, #DDD6FE 100%);
@@ -1555,6 +1566,10 @@
 
       <div class="tx-section">
         <div class="tx-title" style="margin-bottom:8px">📊 월별 상세 (클릭시 이동)</div>
+        <div class="month-bar-legend">
+          <span class="legend-item"><span class="legend-color my"></span>내 실제 지출</span>
+          <span class="legend-item"><span class="legend-color card"></span>카드 사용액</span>
+        </div>
         <div class="monthly-bars" id="monthlyBars"></div>
         <div class="avg-card">
           <div class="avg-row"><span class="avg-label">월평균 총 지출</span><span class="avg-value" id="avgTotal">0원</span></div>
@@ -2935,6 +2950,8 @@
 
       // 금액 패턴
       const amtPattern = /^([0-9,]+)\s*원\s*$/;
+      // 날짜+시간 패턴 (일시불, 26.2.1 14:07)
+      const dateTimePattern = /일시불.*?(\d{2})\.(\d{1,2})\.(\d{1,2})/;
 
       let i = 0;
       while (i < lines.length) {
@@ -2948,7 +2965,38 @@
           continue;
         }
 
-        // 방법 2: 멀티라인 형식 (현대카드 명세서 등)
+        // 방법 2: 4줄 형식 (사용처 / 금액원 / 카드종류 / 일시불,날짜)
+        if (amtPattern.test(line) && i >= 1 && i + 2 < lines.length) {
+          const nextLine = lines[i + 1];  // 카드종류
+          const nextNextLine = lines[i + 2];  // 일시불, 날짜
+
+          if (dateTimePattern.test(nextNextLine)) {
+            const amtMatch = line.match(amtPattern);
+            const amt = parseInt(amtMatch[1].replace(/,/g, ''));
+            const storeLine = lines[i - 1];  // 사용처
+            const cardLine = nextLine;
+            const dateLine = nextNextLine;
+
+            const dateMatch = dateLine.match(dateTimePattern);
+            let date = '';
+            if (dateMatch) {
+              const mm = dateMatch[2].padStart(2, '0');
+              const dd = dateMatch[3].padStart(2, '0');
+              date = `${mm}/${dd}`;
+            }
+
+            const card = normalizeCardName(cardLine);
+            const cat = detectCategoryFromStore(storeLine);
+
+            if (amt >= 100 && storeLine) {
+              parsedTx.push({ store: storeLine, amt, card, date, cat });
+              i += 3;  // 카드줄, 날짜줄 스킵
+              continue;
+            }
+          }
+        }
+
+        // 방법 3: 멀티라인 형식 (현대카드 명세서 등)
         // 금액만 있는 줄을 찾아서 위로 탐색
         if (amtPattern.test(line)) {
           const amtMatch = line.match(amtPattern);
@@ -2969,7 +3017,7 @@
           }
         }
 
-        // 방법 3: 단일 줄 시도
+        // 방법 4: 단일 줄 시도
         const p = parseLine(line);
         if (p) parsedTx.push(p);
 
@@ -3009,14 +3057,17 @@
     function normalizeCardName(rawCard) {
       const text = rawCard.trim();
 
-      // 현대카드 상품명 정규화
+      // 현대카드 상품명 정규화 (Amex 포함)
       const hyundaiProducts = [
-        [/대한항공카드/i, '현대 대한항공카드'],
+        [/대한항공카드|대한항공\s*카드/i, '현대 대한항공카드'],
         [/아시아나카드/i, '현대 아시아나카드'],
         [/M\s*카드|엠카드/i, '현대 M카드'],
         [/X\s*카드|엑스카드/i, '현대 X카드'],
         [/제로카드|ZERO/i, '현대 제로카드'],
-        [/그린카드/i, '현대 그린카드'],
+        [/Amex\s*Green|그린카드|Green\s*카드/i, '현대 Green카드'],
+        [/Amex\s*Gold|골드카드|Gold\s*카드/i, '현대 Gold카드'],
+        [/Amex\s*Platinum|플래티넘/i, '현대 Platinum카드'],
+        [/Amex/i, '현대카드'],
         [/네이버\s*현대카드/i, '네이버 현대카드'],
         [/카카오\s*현대카드/i, '카카오 현대카드'],
         [/코스트코\s*카드/i, '현대 코스트코카드'],
@@ -3505,6 +3556,13 @@
     }
 
     // ===== 연간 뷰 =====
+    function isDebitOrCash(cardName) {
+      const name = cardName || '';
+      if (name === '현금' || name.includes('계좌이체')) return true;
+      if (name.includes('체크')) return true;
+      return false;
+    }
+
     function renderYearly() {
       let yTotal = 0, yMy = 0, yGift = 0;
       const monthlyStats = [];
@@ -3512,7 +3570,7 @@
 
       for (let m = 1; m <= 12; m++) {
         const tx = state.data[key(state.year, m)] || [];
-        let total = 0, my = 0, gift = 0;
+        let total = 0, my = 0, gift = 0, cardOnly = 0;
         tx.forEach(t => {
           total += t.amt;
           if (t.cat === 'giftcard') {
@@ -3528,9 +3586,13 @@
             my += myShare;
             // 카테고리별 내 실제 지출
             yCatTotals[t.cat] = (yCatTotals[t.cat] || 0) + myShare;
+            // 총 카드 사용 금액 (현금/계좌이체/체크카드 제외)
+            if (!isDebitOrCash(t.card)) {
+              cardOnly += t.amt;
+            }
           }
         });
-        monthlyStats.push({ m, total, my, gift });
+        monthlyStats.push({ m, total, my, gift, cardOnly });
         yTotal += total; yMy += my; yGift += gift;
       }
 
@@ -3652,14 +3714,27 @@
     }
 
     function renderMonthlyBars(stats) {
-      const max = Math.max(...stats.map(s => s.my), 1);
+      const maxMy = Math.max(...stats.map(s => s.my), 1);
+      const maxCard = Math.max(...stats.map(s => s.cardOnly || 0), 1);
+      const maxVal = Math.max(maxMy, maxCard);
+
       document.getElementById('monthlyBars').innerHTML = stats.map(s => `
         <div class="month-bar-item" onclick="goMonth(${s.m})">
           <span class="month-bar-label">${s.m}월</span>
-          <div class="month-bar-track">
-            <div class="month-bar-fill living" style="width:${(s.my/max)*100}%"></div>
+          <div class="month-bar-dual">
+            <div class="month-bar-row">
+              <div class="month-bar-track">
+                <div class="month-bar-fill my-expense" style="width:${(s.my/maxVal)*100}%"></div>
+              </div>
+              <span class="month-bar-value">${s.my ? fmtShort(s.my) : '-'}</span>
+            </div>
+            <div class="month-bar-row">
+              <div class="month-bar-track">
+                <div class="month-bar-fill card-expense" style="width:${((s.cardOnly||0)/maxVal)*100}%"></div>
+              </div>
+              <span class="month-bar-value card">${s.cardOnly ? fmtShort(s.cardOnly) : '-'}</span>
+            </div>
           </div>
-          <span class="month-bar-value">${s.my ? fmtShort(s.my) + '원' : '-'}</span>
         </div>`).join('');
     }
 
@@ -3759,7 +3834,7 @@
         beforeDraw: function(chart) {
           const { width, height, ctx } = chart;
           ctx.restore();
-          const fontSize = (height / 114).toFixed(2);
+          const fontSize = (height / 180).toFixed(2);
           ctx.font = `bold ${fontSize}em Pretendard`;
           ctx.textBaseline = 'middle';
           ctx.textAlign = 'center';
